@@ -1295,13 +1295,15 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
 ## Environment
 
 - `ZPKG_DIR` — bottle store (default `~/.pkgx`)
-- `ZPKG_DIST` — bottle source (default `oci://ghcr.io/go-pkgx/packages`, the signed
-  registry; set `https://dist.pkgx.dev` for the full unsigned upstream pantry —
-  pair with `ZPKG_VERIFY=0`).
-  The `go-pkgx` in that URL is a **deployment fact, not our name**: GitHub's
-  container packages are org-scoped and did not follow the repository
-  transfer, so the repositories moved to `go-zpkg` and every bottle stayed.
-  It changes when the bottles are copied, not before
+- `ZPKG_DIST` — bottle source. The default is our signed registry;
+  `zpkgx --help` prints the one this binary is built against, and it is held
+  in exactly one place, `bottle.DistBase`, so it moves in one edit. Point this
+  at a mirror of your own if you have one.
+  ⛔ It no longer names an upstream pkgx dist as an alternative: we are no
+  longer compatible with pkgx (go-zpkg/packages#431), so `ZPKG_DIST` +
+  `ZPKG_VERIFY=0` against its pantry is not something this resolver can
+  promise. The namespace the default currently sits in is a deployment fact
+  that is being wound down, not our name
 - `ZPKG_VERIFY` — verify bottle signatures, fail-closed (default on; set
   `0`/`false`/`no`/`off` to disable)
 - `ZPKG_TRUSTED_KEYS` — who may vouch for a bottle: `name:KEY` entries,
