@@ -1393,7 +1393,8 @@ back to environment variables and built-in defaults).
 
 Pure Go, cgo disabled. On `FROM scratch` it reads each bottle's ELF `DT_NEEDED`
 to auto-complete the implicit libc/gcc closure the pantry graph omits, then
-execs through the pkgx glibc loader so the program and its children resolve.
+execs through the glibc bottle's own loader so the program and its children
+resolve.
 BSD-3-Clause.
 
 ### The loader is posed before the environment is composed
