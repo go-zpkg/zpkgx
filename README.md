@@ -28,10 +28,10 @@ ls` listed a catalogue where upstream runs GNU ls, and there was no way to
 ask for the other one.
 
 ```console
-$ pkgx ls --version          # GNU coreutils, as upstream does
+$ zpkgx ls --version          # GNU coreutils, as upstream does
 ls (GNU coreutils) 9.11
 $ pkgs ls gnu.org            # what is available under a node
-$ pkgx -Q ls                 # upstream's query mode, which this fork lacked
+$ zpkgx -Q ls                 # upstream's query mode, which this fork lacked
 gnu.org/coreutils
 ```
 
@@ -62,7 +62,7 @@ moved verb that a package also provides — `gnu.org/coreutils`. So an old
 profile does not get a pointer, it gets GNU env:
 
 ```console
-$ pkgx env load foo
+$ zpkgx env load foo
 env: ‘load’: No such file or directory      # exit 127
 ```
 
@@ -157,9 +157,9 @@ pkgs -h,--help   pkgs -v,--version
 
 ```console
 # on a FROM scratch image whose only file is the pkgx binary:
-$ pkgx node@22 --version
+$ zpkgx node@22 --version
 v22.x.x
-$ pkgx +git +gnu.org/bash -- sh -c 'git --version'
+$ zpkgx +git +gnu.org/bash -- sh -c 'git --version'
 git version 2.x.x
 ```
 
@@ -167,10 +167,10 @@ git version 2.x.x
 
 ```console
 $ pkgs catalog update
-1907 project(s) → /home/you/.pkgx/catalog/linux-x86-64.json
+1907 project(s) → /home/you/.zpkg/catalog/linux-x86-64.json
 
 $ pkgs ls
-pkgx: catalogue /home/you/.pkgx/catalog/linux-x86-64.json, 2 hour(s) old
+zpkgx: catalogue /home/you/.zpkg/catalog/linux-x86-64.json, 2 hour(s) old
 curl.se                                  8.17.0, 1 under
 github.com                               41 under
 gnu.org                                  30 under
@@ -237,13 +237,13 @@ It is not cosmetic. A recipe asking for `go.dev ^1.27.1` resolves here and
 does not resolve on linux at all, and nothing said so:
 
 ```console
-$ pkgx --graph +go.dev@^1.27.1
+$ zpkgx --graph +go.dev@^1.27.1
 go.dev 1.27.1
 └─ openssl.org 3.6.4
    └─ curl.se/ca-certs 2026.09.25
 
-$ pkgx --graph --platform linux/x86-64 +go.dev@^1.27.1
-pkgx: no version of go.dev satisfies "^1.27.1" AND is published for
+$ zpkgx --graph --platform linux/x86-64 +go.dev@^1.27.1
+zpkgx: no version of go.dev satisfies "^1.27.1" AND is published for
 linux/x86-64 (available: 1.27.1 1.26.8 1.26.5 … (11 in all);
 satisfy but not published here: 1.27.1); asked for by ^1.27.1 (requested)
 ```
@@ -270,7 +270,7 @@ read as unblocked when it is not. It now refuses:
 
 ```console
 $ ZPKG_CATALOG=/nope/absent.json pkgx --graph +go.dev
-pkgx: ZPKG_CATALOG names /nope/absent.json, and --graph does not read a
+zpkgx: ZPKG_CATALOG names /nope/absent.json, and --graph does not read a
 catalogue — it resolves against the registry. To ask about another platform:
 --graph --platform os/arch
 ```
@@ -520,8 +520,8 @@ Nothing was sent. `pkgs request --url …` prints a link that opens this as an i
 The line that prompted it, from a user on 2026-10-22:
 
 ```console
-$ pkgx openstack user list --domain stratuslab
-pkgx: opendev.org/openstack/python-openstackclient is not published in
+$ zpkgx openstack user list --domain stratuslab
+zpkgx: opendev.org/openstack/python-openstackclient is not published in
       ghcr.io/go-pkgx/packages/… : response status code 403: denied
 ```
 
@@ -584,9 +584,9 @@ who met the 403 did not, so the failure itself says where to go — and only
 that failure:
 
 ```console
-$ pkgx openstack user list --domain stratuslab
-pkgx: opendev.org/openstack/python-openstackclient is not published in …
-pkgx: if it should be here: `pkgs request opendev.org/openstack/python-openstackclient`
+$ zpkgx openstack user list --domain stratuslab
+zpkgx: opendev.org/openstack/python-openstackclient is not published in …
+zpkgx: if it should be here: `pkgs request opendev.org/openstack/python-openstackclient`
       prints a report you can open as an issue (it sends nothing)
 ```
 
@@ -595,7 +595,7 @@ pkgx: if it should be here: `pkgs request opendev.org/openstack/python-openstack
 first live run fired on
 
 ```console
-pkgx: command not found in the requested packages: true
+zpkgx: command not found in the requested packages: true
 ```
 
 where the package was published and the **command** was missing. A hint that
@@ -611,8 +611,8 @@ with no bottle for *your* platform: measured against the published
 which `v0.25.0` shipped a hint that could not fire:
 
 ```console
-$ pkgx +aerc-mail.org -- echo ok
-pkgx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0.22.0; not published here: 0.22.0)
+$ zpkgx +aerc-mail.org -- echo ok
+zpkgx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0.22.0; not published here: 0.22.0)
 ```
 
 Both states are types now, and `bottle.ProjectToRequest` answers both in one
@@ -724,10 +724,10 @@ recipe and the catalogue: the prose was never written.
 ### And the command runs, not just searches
 
 ```console
-$ pkgx rg --version
+$ zpkgx rg --version
 ripgrep 15.2.0
 
-$ pkgx jq --version
+$ zpkgx jq --version
 jq-1.8.2
 ```
 
@@ -784,10 +784,10 @@ eval "$(pkgs completion bash)"     # or zsh, or: pkgs completion fish | source
 ```
 
 ```console
-$ pkgx +gnu.org/ba<TAB>
+$ zpkgx +gnu.org/ba<TAB>
 +gnu.org/bash
 
-$ pkgx gnu.o<TAB>
+$ zpkgx gnu.o<TAB>
 gnu.org/                                 # with the slash, so the next TAB descends
 ```
 
@@ -1031,7 +1031,7 @@ on its own:
 
 ```console
 $ pkgs catalog
-/home/you/.pkgx/catalog/linux-x86-64.json
+/home/you/.zpkg/catalog/linux-x86-64.json
 1907 project(s), 905 with dependencies, 2 hour(s) old
 ```
 
@@ -1055,12 +1055,12 @@ store is a word with no meaning.
 ## An abandoned release line is not what you get by default
 
 ```console
-$ pkgx --graph --platform linux/x86-64 +openssl.org@^3
+$ zpkgx --graph --platform linux/x86-64 +openssl.org@^3
 openssl.org 3.5.8
 └─ curl.se/ca-certs 2026.10.20
 
-$ pkgx --graph --platform linux/x86-64 +openssl.org@~3.6
-pkgx: openssl.org 3.6.4 is on end-of-life release line 3.6 and nothing
+$ zpkgx --graph --platform linux/x86-64 +openssl.org@~3.6
+zpkgx: openssl.org 3.6.4 is on end-of-life release line 3.6 and nothing
       supported satisfies "~3.6"; using it
 openssl.org 3.6.4
 ```
@@ -1107,8 +1107,8 @@ mistake behind behaviour that looks like it worked.
 ## Running exactly what a lock pins
 
 ```console
-$ pkgx --lock seed.lock.hcl -- make
-pkgx: seed.lock.hcl, 231 pin(s), 3 hour(s) old
+$ zpkgx --lock seed.lock.hcl -- make
+zpkgx: seed.lock.hcl, 231 pin(s), 3 hour(s) old
 ```
 
 `bk lock` wrote locks and nothing acted on one. A lock nobody consumes is a
@@ -1221,7 +1221,7 @@ Generate modulefiles and let the site's own Lmod load them. Nothing about
 Lmod is still the one doing the work.
 
 ```console
-$ pkgx --modulefile +openmpi.org@5 > $MODULEPATH_DIR/openmpi/5.0.8.lua
+$ zpkgx --modulefile +openmpi.org@5 > $MODULEPATH_DIR/openmpi/5.0.8.lua
 ```
 
 ### Without one
@@ -1258,7 +1258,7 @@ $ pkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
     prepend_path("PATH", pathJoin(root, "bin"))
   line 5: depends_on states a RELATIONSHIP between modules, not an environment change: decide it in the environment that replaces this one
     depends_on("hwloc")
-pkgx: 1 of 2 modulefile(s) not converted — nothing written, because a PARTIAL conversion is the one outcome nobody can check
+zpkgx: 1 of 2 modulefile(s) not converted — nothing written, because a PARTIAL conversion is the one outcome nobody can check
 ```
 
 ⛔ **The file it writes is a boundary, and since v0.28.0 two more things are
@@ -1370,19 +1370,19 @@ The other half lives in `zbk`: rebuild, compare with `zbk reproduce`, and
 default, when your rebuild produced different bytes. That refusal is the
 finding.
 
-### `~/.pkgx/config.hcl2`
+### `~/.zpkg/config.hcl2`
 
 Rather than exporting the `ZPKG_*` (and OCI auth) variables every time, set
-their defaults declaratively in `~/.pkgx/config.hcl2`. It is a small
+their defaults declaratively in `~/.zpkg/config.hcl2`. It is a small
 [HCL2](https://github.com/hashicorp/hcl) file of top-level attributes; a real
 environment variable always overrides a value set here:
 
 ```hcl2
-# ~/.pkgx/config.hcl2 — defaults for the go-zpkg tools.
+# ~/.zpkg/config.hcl2 — defaults for the go-zpkg tools.
 # A real environment variable always overrides a value set here.
 ZPKG_DIST   = "oci://ghcr.io/go-pkgx/packages"  # signed registry (default)
 ZPKG_VERIFY = true                               # fail-closed signature check
-# ZPKG_DIR    = "/opt/pkgx"
+# ZPKG_DIR    = "/opt/zpkg"
 # ZPKG_PANTRY = "https://raw.githubusercontent.com/pkgxdev/pantry/main/projects"
 # OCI_TOKEN   = "..."                            # private-registry credentials
 ```
@@ -1415,7 +1415,7 @@ before the answer exists. Measured 2026-10-09 in a container whose only file
 was the pkgx binary:
 
 ```sh
-$ pkgx stedolan.github.io/jq -n '1+1'
+$ zpkgx stedolan.github.io/jq -n '1+1'
 …/jq: error while loading shared libraries: libm.so.6: cannot open shared
 object file: No such file or directory
 ```

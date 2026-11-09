@@ -148,12 +148,12 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -ldflags='-s -w' -o pkgx-${{ matrix.goos }}-${{ matrix.goarch }} .
+        run: go build -ldflags='-s -w' -o zpkgx-${{ matrix.goos }}-${{ matrix.goarch }} .
 
-  # Proof-of-concept: build pkgx.exe natively on a real Windows runner, fabricate
+  # Proof-of-concept: build zpkgx.exe natively on a real Windows runner, fabricate
   # a tiny Windows pkgx bottle (a PE built by the runner's Go toolchain, laid out
   # as <project>/windows/x86-64/{versions.txt,v1.0.0.tar.gz}), serve dist/ over
-  # HTTP, and prove `pkgx.exe <project>` fetches the bottle, resolves the .exe,
+  # HTTP, and prove `zpkgx.exe <project>` fetches the bottle, resolves the .exe,
   # execs it, and both its output AND its exit code propagate.
   #
   # NB: pkgx depends on github.com/go-zpkg/bottle via a tagged version; the
@@ -167,20 +167,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          path: pkgx
+          path: zpkgx
       - uses: actions/setup-go@v7
         with:
           go-version: '1.27.3'
 
-      - name: Build pkgx.exe (native windows/amd64)
-        working-directory: pkgx
+      - name: Build zpkgx.exe (native windows/amd64)
+        working-directory: zpkgx
         env:
           CGO_ENABLED: "0"
-        run: go build -o pkgx.exe .
+        run: go build -o zpkgx.exe .
 
       - name: Fabricate a tiny windows bottle (hello.exe)
         shell: pwsh
-        working-directory: pkgx
+        working-directory: zpkgx
         run: |
           $proj = "hello.test"; $ver = "1.0.0"; $slug = "x86-64"
           New-Item -ItemType Directory -Force -Path hello | Out-Null
@@ -208,9 +208,9 @@ jobs:
           Set-Content "dist/$proj/package.yml" "provides:`n  - bin/hello`n"
           Get-ChildItem -Recurse dist | Select-Object FullName
 
-      - name: Serve dist/ and run pkgx.exe
+      - name: Serve dist/ and run zpkgx.exe
         shell: pwsh
-        working-directory: pkgx
+        working-directory: zpkgx
         run: |
           # Serve the fixture with Go, not `python -m http.server`. On a Windows
           # runner `python` can resolve to the Microsoft Store app-execution
@@ -257,13 +257,13 @@ jobs:
           $env:ZPKG_VERIFY = "0"
           try {
             # 1. output round-trip
-            $out = (& .\pkgx.exe hello.test 2>&1 | Out-String).Trim()
-            Write-Host "pkgx.exe hello.test => $out"
+            $out = (& .\zpkgx.exe hello.test 2>&1 | Out-String).Trim()
+            Write-Host "zpkgx.exe hello.test => $out"
             if ($out -notmatch 'hello from pkgx bottle \(win\)') {
               throw "expected greeting, got: $out"
             }
             # 2. arg passing + exit-code propagation through execWindows
-            & .\pkgx.exe hello.test fail
+            & .\zpkgx.exe hello.test fail
             if ($LASTEXITCODE -ne 3) {
               throw "expected exit code 3, got $LASTEXITCODE"
             }
