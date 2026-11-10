@@ -113,7 +113,7 @@ asking ABOUT packages is zpkgs, a separate command:
   long form of everything above.
 
 env:
-  ZPKG_DIR     bottle store (default: ~/.pkgx)
+  ZPKG_DIR     bottle store (default: ~/.zpkg)
   ZPKG_CATALOG read the catalogue from this file instead of $ZPKG_DIR/catalog —
                for an air-gapped image, or to inspect one before publishing.
                Named and unreadable is an error, not a quiet fallback
@@ -155,7 +155,7 @@ env:
                resolving is worse than the defect it avoids. An entry with
                no hash withdraws every build of the version
 
-  ~/.pkgx/config.hcl2 sets defaults for the ZPKG_* / OCI_* variables above
+  ~/.zpkg/config.hcl2 sets defaults for the ZPKG_* / OCI_* variables above
   (HCL2 attributes, e.g. ZPKG_DIST = "oci://ghcr.io/go-pkgx/packages"). A real
   environment variable always overrides a value set in the file.
 `
@@ -194,7 +194,7 @@ func Pkgx(argv []string) int { return run(argv) }
 // variable exists so the wrong name cannot be printed by accident: there is
 // one place to set it, and both mains set it before anything runs.
 //
-// Only the PROGRAM NAME uses it. `~/.pkgx/config.hcl2`, `ZPKG_DIR` and the
+// Only the PROGRAM NAME uses it. `~/.zpkg/config.hcl2`, `ZPKG_DIR` and the
 // rest are paths and variables shared by both binaries, and they keep the
 // spelling the filesystem and the environment use.
 var tool = "zpkgx"
@@ -223,7 +223,7 @@ func bottleWarn() {
 	bottle.Warn = func(msg string) { fmt.Fprintln(os.Stderr, pfx()+msg) }
 }
 
-// configError reports a load/parse failure of ~/.pkgx/config.hcl2, if any. It
+// configError reports a load/parse failure of ~/.zpkg/config.hcl2, if any. It
 // is a var so tests can drive the startup-warning path.
 var configError = bottle.ConfigError
 
@@ -244,7 +244,7 @@ func run(argv []string) int {
 	// object file". Print those diagnostics; bottle stays silent by default.
 	bottleWarn()
 	if err := configError(); err != nil {
-		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.pkgx/config.hcl2: "+err.Error())
+		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.zpkg/config.hcl2: "+err.Error())
 	}
 	if len(argv) == 0 {
 		fmt.Fprint(os.Stderr, usage)
