@@ -61,7 +61,7 @@ jobs:
 
       # Cross-compile the pure-Go CGO_ENABLED=0 binary for every
       # {linux,darwin,windows} x {amd64,arm64} target, name the assets
-      # pkgx-<os>-<arch> (windows: .exe), and record a SHA256SUMS manifest.
+      # zpkgx-<os>-<arch> (windows: .exe), and record a SHA256SUMS manifest.
       # The release version (tag without the leading "v") is injected into
       # internal/app.version via -ldflags so `--version` matches the tag.
       # ⛔ dist/ MUST NOT LIVE IN THE CHECKOUT. Go stamps the main module
@@ -201,10 +201,19 @@ jobs:
         run: |
           set -eu
           DIST="$RUNNER_TEMP/dist"
+          # ⛔⛔ THE TOOL NAMES IN --notes ARE THE INSTALLER'S ARGUMENT, and they
+          # were the RETIRED ones. install.sh accepts exactly
+          # {zpkgm, zpkgx, zpkgs, mirror} and refuses anything else BY NAME
+          # (go-zpkg.github.io static/install.sh:59-61 — "unknown tool 'pkgx'",
+          # exit 1), so every release published notes whose install command
+          # fails, for both halves. The assets beside them have been `zpkgx-*`
+          # and `zpkgs-*` all along, which is why nothing else noticed: the
+          # download worked, only the sentence telling people how to get it did
+          # not.
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$DIST"/* --clobber
           else
             gh release create "$TAG" "$DIST"/* \
               --title "$TAG" \
-              --notes "Static, dependency-free binaries (CGO_ENABLED=0) for linux, darwin and windows on amd64 and arm64. TWO commands: pkgx runs packages, pkgs answers about them (ls, search, why, catalog, store, browse, compat, env, completion). Verify downloads against SHA256SUMS. Install THIS release with: curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- pkgx $TAG — and the same line with pkgs."
+              --notes "Static, dependency-free binaries (CGO_ENABLED=0) for linux, darwin and windows on amd64 and arm64. TWO commands: zpkgx runs packages, zpkgs answers about them (ls, search, why, catalog, store, browse, compat, env, completion). Verify downloads against SHA256SUMS. Install THIS release with: curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx $TAG — and the same line with zpkgs."
           fi
