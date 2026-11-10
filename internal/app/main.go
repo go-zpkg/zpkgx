@@ -54,7 +54,7 @@ usage:
                                      that composes it (see --modulefile)
   zpkgx --modulefile +<pkg>...        the same environment as an Lmod modulefile,
                                      so an HPC site keeps its module command
-  zpkgx --lock <file> [cmd ...]       run exactly the versions a "bk lock" file
+  zpkgx --lock <file> [cmd ...]       run exactly the versions a "zbk lock" file
                                      pins — every pin, not just its roots, so
                                      a set that cannot be satisfied exactly
                                      FAILS rather than materialising something

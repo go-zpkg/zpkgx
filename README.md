@@ -1,19 +1,19 @@
-# pkgx
+# zpkgx
 
-[![pkg.go.dev](https://img.shields.io/badge/pkg.go.dev-pkgx-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/go-zpkg/zpkgx)
+[![pkg.go.dev](https://img.shields.io/badge/pkg.go.dev-zpkgx-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/go-zpkg/zpkgx)
 ![Go](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)
 
-The **pkgx runtime** in pure Go — one static binary that runs any pkgx package
-on the fly, and works on a literally-empty `FROM scratch` image.
+The **zpkgx runtime** in pure Go — one static binary that runs any zpkgx
+package on the fly, and works on a literally-empty `FROM scratch` image.
 
-`pkgx` is the *runtime* half of the pure-Go pkgx family; its sibling
-[pkgm](https://github.com/go-zpkg/zpkgm) is the *installer*. Both share one
+`zpkgx` is the *runtime* half of the pure-Go zpkg family; its sibling
+[zpkgm](https://github.com/go-zpkg/zpkgm) is the *installer*. Both share one
 backend — bottle resolution, download, `FROM scratch` closure completion, and
 loader-aware exec — via the [`github.com/go-zpkg/bottle`](https://github.com/go-zpkg/bottle)
 package, so there is a single source of truth and no duplication.
 
-## ⛔ Two commands: `pkgx` runs, `pkgs` asks
+## ⛔ Two commands: `zpkgx` runs, `zpkgs` asks
 
 This repository builds **two** binaries, and the split is about grammar
 rather than taste.
@@ -23,26 +23,26 @@ Upstream pkgx has no verbs at all: the first argument that is not a flag is a
 position — `ls`, `search`, `why`, `store`, `browse`, `catalog`, `env`,
 `compat`, `completion` — and each one took a name away from the registry. Two
 took names that exist: measured against the published linux/x86-64 catalogue
-on 2026-10-18, **`gnu.org/coreutils` provides both `ls` and `env`**. So `pkgx
+on 2026-10-18, **`gnu.org/coreutils` provides both `ls` and `env`**. So `zpkgx
 ls` listed a catalogue where upstream runs GNU ls, and there was no way to
 ask for the other one.
 
 ```console
 $ zpkgx ls --version          # GNU coreutils, as upstream does
 ls (GNU coreutils) 9.11
-$ pkgs ls gnu.org            # what is available under a node
+$ zpkgs ls gnu.org            # what is available under a node
 $ zpkgx -Q ls                 # upstream's query mode, which this fork lacked
 gnu.org/coreutils
 ```
 
 **A reserved word could not fix it.** The obvious repair is one word to hang
-the verbs off — `pkgx pkg ls`. It fails the same way: `vercel.com/pkg`
+the verbs off — `zpkgx pkg ls`. It fails the same way: `vercel.com/pkg`
 provides the command `pkg`, and any bare word can become a package tomorrow,
 because the whole point of the first position is that the registry decides
 what is in it. Only a token the grammar already reserves is safe: a flag
 (upstream's own choice for `-Q`) or a different binary.
 
-`pkgs` reads as a subject followed by a verb — `pkgs search json`, `pkgs why
+`zpkgs` reads as a subject followed by a verb — `zpkgs search json`, `zpkgs why
 curl.se openssl.org`. Nothing in either published catalogue provides a
 command by that name, while `pkgctl` is a real binary in Arch's devtools and
 `pkgtool` one in Slackware.
@@ -51,13 +51,13 @@ Both are built from `internal/app`: they share the resolver, the catalogue
 reader and the store walker, because a fork of the resolver is a fork of what
 a version *means*.
 
-### ⛔ If you had `pkge` in your profile, re-run its init
+### ⛔ If you had `zpkge` in your profile, re-run its init
 
 ```sh
-eval "$(pkgs env init)"
+eval "$(zpkgs env init)"
 ```
 
-The generated `pkge` function calls `pkgx env load`, and `env` is the one
+The generated `zpkge` function calls `zpkgx env load`, and `env` is the one
 moved verb that a package also provides — `gnu.org/coreutils`. So an old
 profile does not get a pointer, it gets GNU env:
 
@@ -66,12 +66,12 @@ $ zpkgx env load foo
 env: ‘load’: No such file or directory      # exit 127
 ```
 
-That is pkgx obeying the grammar, and it names neither binary. `pkgx env`
-followed by a `pkge` subcommand therefore prints a transition note and
+That is zpkgx obeying the grammar, and it names neither binary. `zpkgx env`
+followed by a `zpkge` subcommand therefore prints a transition note and
 refuses, instead of running coreutils — one word wide, and only for those
-seven words, so `pkgx env FOO=1 printenv` still does what it always did.
+seven words, so `zpkgx env FOO=1 printenv` still does what it always did.
 
-Like pkgm it is `CGO_ENABLED=0` with no runtime dependencies of its own: no
+Like zpkgm it is `CGO_ENABLED=0` with no runtime dependencies of its own: no
 Deno, no curl, no shell — a single ~9 MB binary that materialises each package's
 full dependency closure on demand and execs it.
 
@@ -80,19 +80,19 @@ full dependency closure on demand and execs it.
 **Linux / macOS** — one line, naming the release you want:
 
 ```sh
-curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- pkgx v0.1.5
+curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx v0.32.0
 ```
 
 **Windows** (PowerShell) — `irm | iex` passes no arguments, so the version goes
 in the environment:
 
 ```powershell
-$env:ZPKG_TOOL='pkgx'; $env:ZPKG_VERSION='v0.1.5'; irm https://go-zpkg.github.io/install.ps1 | iex
+$env:ZPKG_TOOL='zpkgx'; $env:ZPKG_VERSION='v0.32.0'; irm https://go-zpkg.github.io/install.ps1 | iex
 ```
 
 The installer downloads the static binary for your os/arch from that
 [release](https://github.com/go-zpkg/zpkgx/releases), verifies it against the
-release `SHA256SUMS`, and drops `pkgx` on your `PATH` (`$HOME/.local/bin`, or
+release `SHA256SUMS`, and drops `zpkgx` on your `PATH` (`$HOME/.local/bin`, or
 `%LOCALAPPDATA%\Programs\go-zpkg` on Windows; `ZPKG_INSTALL` overrides the
 directory on Unix).
 
@@ -103,7 +103,7 @@ GitHub's **provenance attestation** — signed through Sigstore, saying that
 this repository's release workflow built that file from that commit:
 
 ```sh
-gh attestation verify -R go-zpkg/pkgx pkgx-linux-amd64
+gh attestation verify -R go-zpkg/zpkgx zpkgx-linux-amd64
 ```
 
 Every file of a release from **v0.23.2** onward carries one; releases before
@@ -114,8 +114,14 @@ than failing closed, so a 404 on an older binary means *unattested*, not
 The version is named on purpose: this line copied today and the same line
 copied in six months install the same bytes, and a bad release does not reach
 everyone who happens to install that hour. To track releases instead, say so —
-`sh -s -- pkgx latest`, or `ZPKG_VERSION=latest`. Re-running is the updater; it
+`sh -s -- zpkgx latest`, or `ZPKG_VERSION=latest`. Re-running is the updater; it
 skips the download when the target version is already installed.
+
+⛔ **v0.32.0 is pinned here because it is the newest release that carries
+binaries.** v0.33.0 through v0.39.0 are release pages with no files on them —
+their publish step never ran ([#154](https://github.com/go-zpkg/zpkgx/issues/154),
+cause fixed in [#153](https://github.com/go-zpkg/zpkgx/pull/153)). `latest`
+resolves to one of those today, which is why the version is named.
 
 **Go users**:
 
@@ -126,37 +132,37 @@ go install github.com/go-zpkg/zpkgx@latest
 ## Usage
 
 ```
-pkgx <pkg>[@version] [arg...]      run a package's program ephemerally
-                                   e.g. pkgx node@22 --version
-pkgx +<pkg> [+<pkg>...] [cmd ...]  bring packages into the environment and run
-                                   cmd with them on PATH + LD_LIBRARY_PATH
-                                   e.g. pkgx +git +gnu.org/bash -- ./build.sh
-pkgx --json +<pkg>...              the composed environment as data
-pkgx --modulefile +<pkg>...        the same, as an Lmod modulefile
-pkgx --lock <file> [cmd ...]       exactly the versions a bk lock pins
-pkgx --graph [--platform os/arch] +<pkg>...
-                                   the resolved graph, for any platform
-pkgx -Q [command]                  what can be run, and from which project
-pkgx -h,--help   pkgx -v,--version
+zpkgx <pkg>[@version] [arg...]      run a package's program ephemerally
+                                    e.g. zpkgx node@22 --version
+zpkgx +<pkg> [+<pkg>...] [cmd ...]  bring packages into the environment and run
+                                    cmd with them on PATH + LD_LIBRARY_PATH
+                                    e.g. zpkgx +git +gnu.org/bash -- ./build.sh
+zpkgx --json +<pkg>...              the composed environment as data
+zpkgx --modulefile +<pkg>...        the same, as an Lmod modulefile
+zpkgx --lock <file> [cmd ...]       exactly the versions a zbk lock pins
+zpkgx --graph [--platform os/arch] +<pkg>...
+                                    the resolved graph, for any platform
+zpkgx -Q [command]                  what can be run, and from which project
+zpkgx -h,--help   zpkgx -v,--version
 
-pkgs ls [--tree] [node]            what is available under a node
-pkgs ls --dependents <pkg>         who NEEDS this
-pkgs why <project> <dependency>    the shortest path between them
-pkgs search [-n N] <text>          by name, or by a command it provides
-pkgs browse [node]                 walk the tree full-screen
-pkgs catalog [update|reindex]      the catalogue; update takes --platform
-pkgs store [--by-size] [--root …]  what this disk holds, and what it is for
-pkgs compat +<pin>... -- <pkg>...  how much of a set resolves under a base
-pkgs env init [--module]           the pkge shell function (and module/ml)
-pkgs env load|unload|purge         what that function evaluates
-pkgs env avail | show <env>        the declared environments
-pkgs env import <modulefile>...    convert Lmod/Environment Modules files
-pkgs completion bash|zsh|fish      <TAB> completion, for BOTH commands
-pkgs -h,--help   pkgs -v,--version
+zpkgs ls [--tree] [node]            what is available under a node
+zpkgs ls --dependents <pkg>         who NEEDS this
+zpkgs why <project> <dependency>    the shortest path between them
+zpkgs search [-n N] <text>          by name, or by a command it provides
+zpkgs browse [node]                 walk the tree full-screen
+zpkgs catalog [update|reindex]      the catalogue; update takes --platform
+zpkgs store [--by-size] [--root …]  what this disk holds, and what it is for
+zpkgs compat +<pin>... -- <pkg>...  how much of a set resolves under a base
+zpkgs env init [--module]           the zpkge shell function (and module/ml)
+zpkgs env load|unload|purge         what that function evaluates
+zpkgs env avail | show <env>        the declared environments
+zpkgs env import <modulefile>...    convert Lmod/Environment Modules files
+zpkgs completion bash|zsh|fish      <TAB> completion, for BOTH commands
+zpkgs -h,--help   zpkgs -v,--version
 ```
 
 ```console
-# on a FROM scratch image whose only file is the pkgx binary:
+# on a FROM scratch image whose only file is the zpkgx binary:
 $ zpkgx node@22 --version
 v22.x.x
 $ zpkgx +git +gnu.org/bash -- sh -c 'git --version'
