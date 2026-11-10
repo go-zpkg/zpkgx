@@ -119,7 +119,7 @@ func TestAnArrowIsNotThreeKeystrokes(t *testing.T) {
 }
 
 // q prints the pins on STDOUT and the screen on stderr, so
-// `zpkgx +$(zpkgx browse)` composes instead of putting borders on a command
+// `zpkgx +$(zpkgs browse)` composes instead of putting borders on a command
 // line.
 func TestPinsAreTheResultAndGoToStdout(t *testing.T) {
 	b := &browser{cat: browseCat()}
