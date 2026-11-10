@@ -141,7 +141,7 @@ usage:
   "zpkgx node@22 --version", "zpkgx +gnu.org/make -- build.sh", "zpkgx -Q git".
 
 env:
-  ZPKG_DIR     bottle store (default: ~/.pkgx)
+  ZPKG_DIR     bottle store (default: ~/.zpkg)
   ZPKG_CATALOG read the catalogue from this file instead of $ZPKG_DIR/catalog —
                for an air-gapped image, or to inspect one before publishing.
                Named and unreadable is an error, not a quiet fallback
@@ -275,7 +275,7 @@ func Pkgs(argv []string) int {
 	tool = "zpkgs"
 	bottleWarn()
 	if err := configError(); err != nil {
-		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.pkgx/config.hcl2: "+err.Error())
+		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.zpkg/config.hcl2: "+err.Error())
 	}
 	if len(argv) == 0 {
 		fmt.Fprint(os.Stderr, zpkgsUsage)

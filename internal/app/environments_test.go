@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+// ⛔⛔ TestTheHomeEnvironmentDirIsTheStORE'S, NOT UPSTREAM'S.
+//
+// environmentDirs appended `$HOME/.pkgx/environments` for as long as
+// bottle.Dir() had been `$HOME/.zpkg` — so a user's environments were written
+// to one directory and searched for in another, and on a machine that had
+// never run upstream pkgx the path did not exist at all. The spelling was the
+// whole defect, which is why the assertion is on the spelling.
+//
+// `~/.pkgx` is upstream's store. Reading it would be reaching into another
+// project's directory, which is the same argument bottle/pkgx.go:376-379 makes
+// for migrating nothing.
+func TestTheHomeEnvironmentDirIsOurStore(t *testing.T) {
+	dirs := environmentDirs("", "/home/u")
+	if len(dirs) != 1 {
+		t.Fatalf("dirs = %v, want exactly the home one", dirs)
+	}
+	if want := filepath.Join("/home/u", ".zpkg", "environments"); dirs[0] != want {
+		t.Errorf("home environment dir = %q, want %q", dirs[0], want)
+	}
+	for _, d := range dirs {
+		if strings.Contains(d, ".pkgx") {
+			t.Errorf("%q reads upstream pkgx's store", d)
+		}
+	}
+}
+
 func writeEnvFile(t *testing.T, dir, name, body string) string {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o755); err != nil {

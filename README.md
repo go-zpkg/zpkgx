@@ -395,11 +395,11 @@ and a second one reads as a second copy in the store.
 
 ### And what that has cost you
 
-A `✓` is per project. `pkgs store` is the whole disk:
+A `✓` is per project. `zpkgs store` is the whole disk:
 
 ```console
-$ pkgs store --by-size -n 6
-~/.pkgx
+$ zpkgs store --by-size -n 6
+~/.zpkg
 llvm.org                                   13.8 GiB  3 versions, 8.5 GiB not the newest here
 android.com/cmdline-tools                   6.4 GiB
 swift.org                                   4.6 GiB
@@ -1300,7 +1300,7 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
 
 ## Environment
 
-- `ZPKG_DIR` — bottle store (default `~/.pkgx`)
+- `ZPKG_DIR` — bottle store (default `~/.zpkg`)
 - `ZPKG_DIST` — bottle source. The default is our signed registry;
   `zpkgx --help` prints the one this binary is built against, and it is held
   in exactly one place, `bottle.DistBase`, so it moves in one edit. Point this

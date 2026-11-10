@@ -4,7 +4,7 @@ package app
 // people, and the reason `module load cfd` can mean something without a
 // hand-written modulefile behind it.
 //
-//	# ~/.pkgx/environments/site.hcl2      (or $ZPKG_DIR/environments/*.hcl2)
+//	# ~/.zpkg/environments/site.hcl2      (or $ZPKG_DIR/environments/*.hcl2)
 //	env "cfd" {
 //	  description = "the solver stack, as validated on 2026-09-01"
 //	  packages    = ["openmpi.org@5", "hdf5.org", "python.org@3.12"]
@@ -13,7 +13,7 @@ package app
 // Why HCL2 rather than a list of lines: an environment is a thing a site
 // REVIEWS. It wants a description, it wants to live in a pull request, and it
 // wants to say more later (a default, a conflict) without inventing a syntax
-// each time. ~/.pkgx/config.hcl2 already made that choice for this toolchain;
+// each time. ~/.zpkg/config.hcl2 already made that choice for this toolchain;
 // this follows it rather than adding a second dialect.
 //
 // An environment is NOT a lockfile. It names constraints, and the closure is
@@ -78,8 +78,14 @@ func environmentDirs(zpkgxDir, home string) []string {
 	if zpkgxDir != "" {
 		dirs = append(dirs, filepath.Join(zpkgxDir, "environments"))
 	}
+	// ⛔ NOT `~/.pkgx`. This read the retired store's directory long after
+	// bottle.Dir() moved to `~/.zpkg` (bottle/pkgx.go:385), so a user's
+	// environments went in one place and were looked for in another — and on a
+	// machine that had never run upstream pkgx, the path simply did not exist.
+	// `~/.pkgx` is upstream's directory, which is the reason nothing of ours
+	// is migrated into or out of it.
 	if home != "" {
-		dirs = append(dirs, filepath.Join(home, ".pkgx", "environments"))
+		dirs = append(dirs, filepath.Join(home, ".zpkg", "environments"))
 	}
 	return dirs
 }
