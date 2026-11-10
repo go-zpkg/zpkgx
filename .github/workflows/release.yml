@@ -160,7 +160,14 @@ jobs:
           done
           # And the version it PRINTS: the ldflags stamp is what users see,
           # and it is set independently of the build info above.
-          for tool in pkgx pkgs; do
+          # ⛔ THE NAMES THE BUILD LOOP ACTUALLY WROTE. This said
+          # `for tool in pkgx pkgs` while the loop above built zpkgx-* and
+          # zpkgs-*, so it read a path that does not exist, `$(...)` produced
+          # the empty string, and every release from v0.34.0 to v0.39.0 failed
+          # here with "pkgx --version says '', want exactly '0.39.0'" —
+          # taking the attestation and publish steps down with it. Six
+          # releases exist as pages carrying NO binaries.
+          for tool in zpkgx zpkgs; do
             got=$("$DIST/${tool}-linux-amd64" --version | awk '{print $2}')
             if [ "$got" != "$want" ]; then
               echo "::error::$tool --version says '$got', want exactly '$want'"
@@ -175,7 +182,7 @@ jobs:
       # would replace the manifest. A provenance attestation is the half
       # that cannot be forged from the release page — GitHub signs, through
       # Sigstore, a statement that THIS workflow built THAT file from THAT
-      # commit, and `gh attestation verify -R go-zpkg/pkgx <file>` checks it.
+      # commit, and `gh attestation verify -R go-zpkg/zpkgx <file>` checks it.
       #
       # Measured 2026-10-20 on the v0.23.1 release, with go-fleettools'
       # relverify: twelve files, every checksum right, and every attestation
