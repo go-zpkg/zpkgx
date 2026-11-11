@@ -1,6 +1,6 @@
 module github.com/go-zpkg/zpkgx
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/go-zpkg/bottle v0.85.0
