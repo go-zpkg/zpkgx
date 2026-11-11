@@ -6,8 +6,8 @@ package app
 // The design decision that makes it exact: state lives in the ENVIRONMENT and
 // is read back by zpkgx, not by the shell.
 //
-//   PKGE_SPECS  the package set currently loaded, space-separated
-//   PKGE_BASE   the ORIGINAL value of every variable zpkgx has touched,
+//   ZPKGE_SPECS  the package set currently loaded, space-separated
+//   ZPKGE_BASE   the ORIGINAL value of every variable zpkgx has touched,
 //                  base64 of NUL-separated NAME=value records
 //
 // The records are separated by NUL, not by a newline. base64 protects the
@@ -45,11 +45,29 @@ type modState struct {
 	had map[string]bool
 }
 
-// loadModState reads PKGE_SPECS and PKGE_BASE from the environment.
+// ⛔⛔ A PROFILE WRITTEN BEFORE THE RENAME EXPORTS PKGE_*, AND SILENCE IS THE
+// WORST ANSWER. The zpkge function lives in the user's shell profile, so an
+// old one goes on setting PKGE_SPECS/PKGE_BASE while this binary reads
+// ZPKGE_*. Nothing errors: `zpkge list` prints nothing, `unload` unloads
+// nothing, `purge` restores nothing — and the packages stay on PATH, so the
+// shell looks right while the state is invisible.
+//
+// It is REFUSED, not read. Reading the old name would be an alias for a
+// retired spelling, which is the thing being removed; and the fix is one line
+// the user already knows from the verb split. Same shape as staleEnvCall in
+// query.go, and the same remedy sentence.
+func staleModState(getenv func(string) string) bool {
+	if getenv("ZPKGE_SPECS") != "" || getenv("ZPKGE_BASE") != "" {
+		return false // a current profile: nothing to say
+	}
+	return getenv("PKGE_SPECS") != "" || getenv("PKGE_BASE") != ""
+}
+
+// loadModState reads ZPKGE_SPECS and ZPKGE_BASE from the environment.
 func loadModState(getenv func(string) string) modState {
 	st := modState{base: map[string]string{}, had: map[string]bool{}}
-	st.specs = strings.Fields(getenv("PKGE_SPECS"))
-	raw, err := base64.StdEncoding.DecodeString(getenv("PKGE_BASE"))
+	st.specs = strings.Fields(getenv("ZPKGE_SPECS"))
+	raw, err := base64.StdEncoding.DecodeString(getenv("ZPKGE_BASE"))
 	if err != nil {
 		return st // unreadable state is treated as none: the next load recaptures
 	}
@@ -69,7 +87,7 @@ func loadModState(getenv func(string) string) modState {
 	return st
 }
 
-// encode renders the state's base for PKGE_BASE.
+// encode renders the state's base for ZPKGE_BASE.
 func (st modState) encode() string {
 	names := make([]string, 0, len(st.base))
 	for n := range st.base {
@@ -138,11 +156,11 @@ const shellInit = `zpkge() {
       eval "$_zpkge_out" ;;
     list)
       # shellcheck disable=SC2086
-      [ -n "${PKGE_SPECS-}" ] && printf '%s\n' ${PKGE_SPECS} ;;
+      [ -n "${ZPKGE_SPECS-}" ] && printf '%s\n' ${ZPKGE_SPECS} ;;
     save)
       [ -n "${1-}" ] || { echo "zpkge save <name>" >&2; return 2; }
       mkdir -p "${ZPKG_DIR:-$HOME/.pkgx}/collections" &&
-      printf '%s\n' "${PKGE_SPECS-}" > "${ZPKG_DIR:-$HOME/.pkgx}/collections/$1" ;;
+      printf '%s\n' "${ZPKGE_SPECS-}" > "${ZPKG_DIR:-$HOME/.pkgx}/collections/$1" ;;
     restore)
       [ -n "${1-}" ] || { echo "zpkge restore <name>" >&2; return 2; }
       _zpkge_f="${ZPKG_DIR:-$HOME/.pkgx}/collections/$1"
@@ -224,6 +242,11 @@ func modeShellInit(module bool, stdout io.Writer) error {
 // the base, and recompute. `purge` is simply the empty set.
 func modeShell(action string, args []string, compose func([]string) (composed, error), getenv func(string) (string, bool), stdout io.Writer) error {
 	get1 := func(n string) string { v, _ := getenv(n); return v }
+	if staleModState(get1) {
+		return fmt.Errorf("your zpkge function is from before the rename: it sets PKGE_SPECS/PKGE_BASE, which this zpkgx no longer reads (they are ZPKGE_*)\n" +
+			"re-run: eval \"$(zpkgs env init)\"\n" +
+			"the packages on your PATH are still there; this refuses rather than act on state it cannot see")
+	}
 	st := loadModState(get1)
 
 	var specs []string
@@ -280,19 +303,19 @@ func modeShell(action string, args []string, compose func([]string) (composed, e
 	if len(specs) == 0 {
 		// Nothing loaded: the state goes too, so a later load captures a fresh
 		// base rather than one recorded in a previous life of this shell.
-		fmt.Fprintln(stdout, "unset PKGE_SPECS")
-		fmt.Fprintln(stdout, "unset PKGE_BASE")
+		fmt.Fprintln(stdout, "unset ZPKGE_SPECS")
+		fmt.Fprintln(stdout, "unset ZPKGE_BASE")
 		fmt.Fprintln(stdout, "unset LOADEDMODULES")
 		return nil
 	}
-	fmt.Fprintf(stdout, "export PKGE_SPECS=%s\n", shellQuote(strings.Join(specs, " ")))
+	fmt.Fprintf(stdout, "export ZPKGE_SPECS=%s\n", shellQuote(strings.Join(specs, " ")))
 	// LOADEDMODULES in Lmod's own spelling (colon-separated), because job
 	// scripts READ it — `if [[ $LOADEDMODULES == *openmpi* ]]` is in thousands
 	// of them. _LMFILES_ is deliberately NOT set: it names modulefiles, and
 	// there are none here. Setting it to something invented would be a lie a
 	// script could act on.
 	fmt.Fprintf(stdout, "export LOADEDMODULES=%s\n", shellQuote(strings.Join(specs, ":")))
-	fmt.Fprintf(stdout, "export PKGE_BASE=%s\n", shellQuote(st.encode()))
+	fmt.Fprintf(stdout, "export ZPKGE_BASE=%s\n", shellQuote(st.encode()))
 	return nil
 }
 
