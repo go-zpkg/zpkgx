@@ -1,8 +1,8 @@
-// Command pkgx runs a package's program without installing it.
+// Command zpkgx runs a package's program without installing it.
 //
 // ⛔ THE WHOLE PROGRAM MOVED TO internal/app AND THIS FILE IS WHAT IS LEFT.
-// Two binaries ship from this module — `pkgx`, which runs things, and `pkgs`
-// (./cmd/pkgs), which asks about them — and they share one resolver, one
+// Two binaries ship from this module — `zpkgx`, which runs things, and `zpkgs`
+// (./cmd/zpkgs), which asks about them — and they share one resolver, one
 // catalogue reader and one store walker. A second repository would have
 // forked all three, and a fork of the resolver is a fork of what a version
 // means.

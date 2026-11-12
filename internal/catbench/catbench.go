@@ -71,13 +71,13 @@ func main() {
 	before := filepath.Join(tmp, "pkgx-before")
 	must(build(tree, baseline, before))
 	// The staging binary. See buildPkgs: `catalog` and `catalog reindex`
-	// are pkgs's verbs now, and asking pkgx for them would ask it to RUN a
+	// are zpkgs's verbs now, and asking zpkgx for them would ask it to RUN a
 	// package called catalog.
 	stager := filepath.Join(tmp, "pkgs")
 	must(buildPkgs(tree, stager))
 
 	// The store the "after" arm reads: a real 1907-project catalogue at the
-	// path `pkgs catalog update` writes.
+	// path `zpkgs catalog update` writes.
 	store := filepath.Join(tmp, "store")
 	must(os.MkdirAll(store, 0o755))
 	dst := catalogPath(stager, store)
@@ -141,7 +141,7 @@ func main() {
 // it with arms it controls. A measuring tool that is never itself measured
 // is how a plausible wrong number gets published.
 func report(w io.Writer, arms []arm, runs int) {
-	fmt.Fprintf(w, "%d runs of: ZPKG_GET_COMPLETIONS=0 pkgx gnu.o   (ZPKG_DIST=%s)\n\n", runs, blackhole)
+	fmt.Fprintf(w, "%d runs of: ZPKG_GET_COMPLETIONS=0 zpkgx gnu.o   (ZPKG_DIST=%s)\n\n", runs, blackhole)
 	fmt.Fprintf(w, "%-22s %10s %10s %10s   %s\n", "arm", "min", "median", "max", "answer")
 	for _, a := range arms {
 		var ds []time.Duration
