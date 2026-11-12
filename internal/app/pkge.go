@@ -159,11 +159,11 @@ const shellInit = `zpkge() {
       [ -n "${ZPKGE_SPECS-}" ] && printf '%s\n' ${ZPKGE_SPECS} ;;
     save)
       [ -n "${1-}" ] || { echo "zpkge save <name>" >&2; return 2; }
-      mkdir -p "${ZPKG_DIR:-$HOME/.pkgx}/collections" &&
-      printf '%s\n' "${ZPKGE_SPECS-}" > "${ZPKG_DIR:-$HOME/.pkgx}/collections/$1" ;;
+      mkdir -p "${ZPKG_DIR:-$HOME/.zpkg}/collections" &&
+      printf '%s\n' "${ZPKGE_SPECS-}" > "${ZPKG_DIR:-$HOME/.zpkg}/collections/$1" ;;
     restore)
       [ -n "${1-}" ] || { echo "zpkge restore <name>" >&2; return 2; }
-      _zpkge_f="${ZPKG_DIR:-$HOME/.pkgx}/collections/$1"
+      _zpkge_f="${ZPKG_DIR:-$HOME/.zpkg}/collections/$1"
       [ -r "$_zpkge_f" ] || { echo "zpkge: no collection $1" >&2; return 1; }
       zpkge purge || return $?
       # shellcheck disable=SC2046
