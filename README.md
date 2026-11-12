@@ -172,25 +172,25 @@ git version 2.x.x
 ## Browsing the tree, and <TAB>
 
 ```console
-$ pkgs catalog update
+$ zpkgs catalog update
 1907 project(s) → /home/you/.zpkg/catalog/linux-x86-64.json
 
-$ pkgs ls
+$ zpkgs ls
 zpkgx: catalogue /home/you/.zpkg/catalog/linux-x86-64.json, 2 hour(s) old
 curl.se                                  8.17.0, 1 under
 github.com                               41 under
 gnu.org                                  30 under
 zlib.net                                 1.3.2
 
-$ pkgs ls gnu.org
+$ zpkgs ls gnu.org
 gnu.org/bash                             5.3  ✓
 gnu.org/gcc                              16.2.0, 1 under
 …
 
-$ pkgs ls doxygen.nl
+$ zpkgs ls doxygen.nl
 doxygen.nl — no bottle here
 
-$ pkgs ls curl.se
+$ zpkgs ls curl.se
 curl.se — 8.17.0
   curl.se/ca-certs
   nghttp2.org
@@ -213,7 +213,7 @@ A node can be **both**, and `curl.se` is: the listing shows its
 dependencies and then says where the namespace half is.
 
 ```console
-$ pkgs ls --tree curl.se
+$ zpkgs ls --tree curl.se
 curl.se — 8.17.0
   curl.se/ca-certs
   nghttp2.org
@@ -228,7 +228,7 @@ long, and the first level is what a person reads. A diamond is named once
 and expanded once — and the one expanded is the **direct** dependency,
 because that is the one a reader came for.
 
-**This is read from the catalogue, so it needs no network.** `pkgx --graph`
+**This is read from the catalogue, so it needs no network.** `zpkgx --graph`
 answers the same question by resolving against the registry, which is the
 better answer when you have one and no answer at all in a scratch image
 that has not fetched anything yet.
@@ -275,7 +275,7 @@ exit 0, which is how this was found — and nearly how go-zpkg/packages#323 was
 read as unblocked when it is not. It now refuses:
 
 ```console
-$ ZPKG_CATALOG=/nope/absent.json pkgx --graph +go.dev
+$ ZPKG_CATALOG=/nope/absent.json zpkgx --graph +go.dev
 zpkgx: ZPKG_CATALOG names /nope/absent.json, and --graph does not read a
 catalogue — it resolves against the registry. To ask about another platform:
 --graph --platform os/arch
@@ -294,7 +294,7 @@ Everything above descends, which answers *what does this need* — the question
 before **installing**. `--dependents` asks the one before **changing**:
 
 ```console
-$ pkgs ls --dependents openssl.org
+$ zpkgs ls --dependents openssl.org
 openssl.org — 4.0.2  ✓ 3.6.0
   agwa.name/git-crypt  (no bottle here)
   apache.org/arrow  25.0.1
@@ -315,11 +315,11 @@ A catalogue records what a platform really carries, so a project with no bottle
 there has no edges there. That is why the platform is printed under the list
 rather than left to be quoted bare.
 
-`pkgs why` is the third question — not *what is in the closure* but **which
+`zpkgs why` is the third question — not *what is in the closure* but **which
 link put it there**:
 
 ```console
-$ pkgs why git-scm.org zlib.net
+$ zpkgs why git-scm.org zlib.net
 git-scm.org — 2.55.0  ✓ 2.47.1
   → zlib.net — 1.3.2  ✓
 ```
@@ -347,7 +347,7 @@ install can hold more than this tree does.
 ### Everything is named; what is here is marked
 
 ```console
-$ pkgs ls --tree curl.se
+$ zpkgs ls --tree curl.se
 curl.se — 8.17.0
   curl.se/ca-certs  2026.09.25
   doxygen.nl  (no bottle here)
@@ -366,7 +366,7 @@ In a **tree** that mark is usually the most useful line on the page: it
 names the reason the thing above it cannot be installed, which would
 otherwise print as a bare name among satisfied ones.
 
-A catalogue built without the registry sweep (`bk catalog` with no
+A catalogue built without the registry sweep (`zbk catalog` with no
 `--versions`) knows nothing about bottles, and says nothing about them —
 every line would otherwise read "no bottle here", which is a statement
 about the catalogue dressed up as a statement about the registry.
@@ -374,7 +374,7 @@ about the catalogue dressed up as a statement about the registry.
 ### And what you already have
 
 ```console
-$ pkgs ls --tree curl.se
+$ zpkgs ls --tree curl.se
 curl.se — 8.17.0  ✓
   curl.se/ca-certs  2026.09.25  ✓
   doxygen.nl  (no bottle here)
@@ -384,7 +384,7 @@ curl.se — 8.17.0  ✓
 
 A catalogue says what **exists**; a reader standing in front of it mostly
 wants to know what they **have**. nix and guix show the state of the store
-in everything they print; here nothing did, and `pkgs ls curl.se` printed
+in everything they print; here nothing did, and `zpkgs ls curl.se` printed
 the same page before and after installing it.
 
 A bare `✓` when what is installed is the version on offer, and
@@ -413,7 +413,7 @@ gohugo.io                                1020.5 MiB  13 versions, 934.6 MiB not 
 ```
 
 Every ephemeral run leaves its bottles behind and **nothing removes one**.
-`pkgm list` answers a different question — what you asked to have installed
+`zpkgm list` answers a different question — what you asked to have installed
 — so a bottle pulled six months ago to run one command is in neither. Those
 figures are this developer's machine on 2026-10-08, and **thirteen versions
 of gohugo.io** is not a number anybody chose.
@@ -426,7 +426,7 @@ here, so there is no root set: a version that looks superseded may be
 exactly what a lock pins. Hence the wording of the last line.
 
 It walks the tree, so it costs **seconds** rather than milliseconds — eight
-over 41 GiB. That is why it is its own command and not a line in `pkgx
+over 41 GiB. That is why it is its own command and not a line in `zpkgx
 catalog`: nothing on the `<TAB>` path may cost that.
 
 Sizes are powers of 1024 and say so with the `i`. `du` counts blocks and
@@ -438,7 +438,7 @@ the least a report can do about it.
 A size is not a decision. `--root` says what a lock needs:
 
 ```console
-$ pkgs store --root seed.lock.hcl
+$ zpkgs store --root seed.lock.hcl
 …
 41.2 GiB over 363 version(s) of 302 project(s)
 
@@ -453,7 +453,7 @@ reporting before `gc` removes.
 
 [gc]: https://guix.gnu.org/manual/html_node/Invoking-guix-gc.html
 
-**A lock is already a root set.** `pkgx --lock` pins every project in the
+**A lock is already a root set.** `zpkgx --lock` pins every project in the
 closure, not only what you typed, so membership in it *is* reachability — no
 graph walk and no network. An **environment** would not do: it names
 constraints, which have to be resolved against the registry, and this works
@@ -474,7 +474,7 @@ seconds over 41 GiB is too long to wait to be told the arguments were wrong.
 ## Walking the tree
 
 ```console
-$ pkgs browse
+$ zpkgs browse
 gnu.org — 54
 
 > gnu.org/bash                             5.3  ✓
@@ -485,7 +485,7 @@ gnu.org — 54
 · / search · space pin for the exit line · q quit, printing what is pinned
 ```
 
-`pkgs ls` answers one question per command, which is right for a script and
+`zpkgs ls` answers one question per command, which is right for a script and
 wrong for a person who does not yet know what they are looking for: reaching
 `curl.se/ca-certs` from `curl.se` costs two commands and knowing that the
 trailing slash exists. [`nix-tree`](https://github.com/utdemir/nix-tree) is
@@ -503,24 +503,24 @@ the other way. The header says which way you are facing, and descending from a
 dependents list keeps walking *up*: who needs the thing that needs it.
 
 `q` prints what you pinned on **stdout** while the screen goes to stderr, so
-`pkgx +$(pkgs browse)` composes instead of putting borders on a command line.
+`zpkgx +$(zpkgs browse)` composes instead of putting borders on a command line.
 
 **It reads the cached catalogue and nothing else** — no network, no
 resolution, no store walk per keystroke. And **without a terminal it prints
-the tree and exits**: `pkgs browse | less`, a CI log and a scratch image are
+the tree and exits**: `zpkgs browse | less`, a CI log and a scratch image are
 the same case, and a command that refuses to work when its output is a pipe
 is one people stop putting in scripts.
 
 ## When it is not here at all
 
 ```console
-$ pkgs request opendev.org/openstack/python-openstackclient
+$ zpkgs request opendev.org/openstack/python-openstackclient
 project   opendev.org/openstack/python-openstackclient
 platform  darwin/aarch64
-pkgs      0.24.0
+zpkgs      0.24.0
 state     never published in this registry, for any platform
 
-Nothing was sent. `pkgs request --url …` prints a link that opens this as an issue.
+Nothing was sent. `zpkgs request --url …` prints a link that opens this as an issue.
 ```
 
 The line that prompted it, from a user on 2026-10-22:
@@ -543,14 +543,14 @@ That third answer is also how you check a rollout, because it says **which
 version** and **where else**:
 
 ```console
-$ pkgs request opendev.org/openstack/python-openstackclient
+$ zpkgs request opendev.org/openstack/python-openstackclient
 project   opendev.org/openstack/python-openstackclient
 platform  darwin/aarch64
-pkgs      0.27.0
+zpkgs      0.27.0
 state     published for darwin/aarch64 at 10.5.0
           also linux/aarch64 linux/x86-64
 
-pkgs: nothing to request: opendev.org/openstack/python-openstackclient 10.5.0 is published for darwin/aarch64
+zpkgs: nothing to request: opendev.org/openstack/python-openstackclient 10.5.0 is published for darwin/aarch64
 ```
 
 ⛔ It used to say only `published for this platform` — true, and silent
@@ -592,7 +592,7 @@ that failure:
 ```console
 $ zpkgx openstack user list --domain stratuslab
 zpkgx: opendev.org/openstack/python-openstackclient is not published in …
-zpkgx: if it should be here: `pkgs request opendev.org/openstack/python-openstackclient`
+zpkgx: if it should be here: `zpkgs request opendev.org/openstack/python-openstackclient`
       prints a report you can open as an issue (it sends nothing)
 ```
 
@@ -623,7 +623,7 @@ zpkgx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0
 
 Both states are types now, and `bottle.ProjectToRequest` answers both in one
 call — two predicates at this call site is exactly how the second came to be
-forgotten. `pkgs ls` can name the 567 for a platform
+forgotten. `zpkgs ls` can name the 567 for a platform
 (`go run ./internal/catstat -missing <catalogue.json>`), which is how that
 example was chosen: from a list the catalogue derived, not from one already
 believed in.
@@ -631,7 +631,7 @@ believed in.
 A build that failed, a signature that did not verify and a registry having a
 bad day get no hint — none of them is something to ask a maintainer to
 publish. A bare registry 404 gets none either: it *is* an absence, but it
-names no project, and `pkgs request <project>` is not an instruction. The cost
+names no project, and `zpkgs request <project>` is not an instruction. The cost
 of that choice is a missed hint, never a wrong one.
 
 ### What keeps failing here
@@ -641,19 +641,19 @@ you that the same package has failed eleven times this month, which is the
 thing worth acting on.
 
 ```console
-$ pkgs journal
+$ zpkgs journal
 2 failure(s) recorded here, 1 of them a package this registry does not have
 
 most asked for and not here:
      1  aerc-mail.org
 
-`pkgs request <project>` turns one of those into a report you can open as
+`zpkgs request <project>` turns one of those into a report you can open as
 an issue. It sends nothing, and neither does this.
 ```
 
 ⛔ **It is a local file, and that is the whole design.** The useful signal
 from a package manager is which packages people reach for and do not get, and
-the usual way to collect it is to phone home. This does not. `pkgs request`
+the usual way to collect it is to phone home. This does not. `zpkgs request`
 already promises, in its own help, that it *sends nothing*; the journal keeps
 that promise and adds the only thing `request` cannot — memory. Nothing here
 opens a socket, `ZPKG_JOURNAL=0` records nothing at all, and `--clear`
@@ -664,7 +664,7 @@ worse than no diary:
 
 | | |
 |---|---|
-| it cannot fail the command it records | a store that cannot be written is a reason for the journal to stay empty, not for `pkgx node` to fail |
+| it cannot fail the command it records | a store that cannot be written is a reason for the journal to stay empty, not for `zpkgx node` to fail |
 | it cannot grow without bound | a failing command in a loop would otherwise fill the disk — one rotation, capped at 2×256 KiB |
 | it cannot carry what it cannot print | the text is an error string quoting names read out of a catalogue, a registry index or a downloaded binary, so it is sanitised on the way **in** |
 
@@ -676,7 +676,7 @@ writer now closes a partial line before adding to it.
 ## You know the command, not the package
 
 ```console
-$ pkgs search rg
+$ zpkgs search rg
 crates.io/ripgrep                        rg  14.1.1
 aardvark.io/rgbds                        rgbasm  0.9.0
 ```
@@ -699,7 +699,7 @@ neither, and by the time anyone compared, both numbers had changed and
 nothing said whether the difference was drift or a defect.
 
 ⛔ **And the search says so, even when it finds plenty.** Measured
-2026-10-20, `pkgs search json` returns **thirteen** projects and none of
+2026-10-20, `zpkgs search json` returns **thirteen** projects and none of
 them is `stedolan.github.io/jq` — jq is in that catalogue, with the command
 `jq` and a bottle for this platform, and the word "json" is in neither its
 path nor its commands. Thirteen answers read as a *complete* answer, so a
@@ -709,14 +709,14 @@ over a catalogue where fewer than one project in five carries a description
 ends with one line on **stderr**:
 
 ```console
-$ pkgs search json
+$ zpkgs search json
 github.com/zaach/jsonlint                jsonlint  1.6.0
 …
-pkgs: only 6 of 1938 projects here carry a description, so a word that is in
+zpkgs: only 6 of 1938 projects here carry a description, so a word that is in
 neither a project's name nor a command it provides cannot reach it
 ```
 
-On stderr, so `pkgs search x > list` still writes results and nothing else;
+On stderr, so `zpkgs search x > list` still writes results and nothing else;
 and only below that floor, so a catalogue that one day carries descriptions
 goes quiet instead of nagging.
 
@@ -739,7 +739,7 @@ jq-1.8.2
 
 `rg` resolved to `crates.io/ripgrep` and `jq` to `stedolan.github.io/jq`,
 from an empty store, offline but for the bottles. A constraint rides along —
-`pkgx node@22 --version` is `nodejs.org` at 22 — and `+rg` works the same
+`zpkgx node@22 --version` is `nodejs.org` at 22 — and `+rg` works the same
 way, because the two syntaxes are one request.
 
 A bare word is a **command**; a project is always a domain or a
@@ -749,9 +749,9 @@ stops being true is noticed.
 
 This was reported from the field, and it is why the paragraph above is not
 the whole story: the mapping lived in the catalogue and only `search` read
-it, so `pkgx hugo version` answered *"no recipe for hugo in …pantry…"* —
+it, so `zpkgx hugo version` answered *"no recipe for hugo in …pantry…"* —
 which reads as "go-zpkg does not know hugo" rather than "look under
-`provides`". Every `pkgx <tool>` habit, Taskfile and doc had to be
+`provides`". Every `zpkgx <tool>` habit, Taskfile and doc had to be
 rewritten with project names to work at all.
 
 Three things it will not do:
@@ -763,7 +763,7 @@ Three things it will not do:
   catalogue says `run: pkgs catalog update`, because a bare word can never
   be a project and a message about a missing *recipe* would be about the
   wrong thing.
-- **Read the catalogue for a project name.** `pkgx +deps` runs inside every
+- **Read the catalogue for a project name.** `zpkgx +deps` runs inside every
   factory build, in a loop; parsing 467 KB to notice that `gnu.org/bash`
   contains a slash would be paid on every call for nothing.
 
@@ -778,7 +778,7 @@ characters is not a search, it is a sieve: `search rg` used to return 625
 projects, 550 of them because `rg` sits inside `.org` — the result anybody
 wanted was still first, and 550 lines of noise stood behind it.
 
-Nothing found exits **non-zero**, so `pkgs search x || echo none` works. And
+Nothing found exits **non-zero**, so `zpkgs search x || echo none` works. And
 a catalogue that carries no command names says so rather than letting "no
 such package" stand for "this catalogue cannot answer that kind of
 question".
@@ -786,7 +786,7 @@ question".
 ### Completion asks the binary
 
 ```sh
-eval "$(pkgs completion bash)"     # or zsh, or: pkgs completion fish | source
+eval "$(zpkgs completion bash)"     # or zsh, or: pkgs completion fish | source
 ```
 
 ```console
@@ -839,25 +839,25 @@ in one pull, per platform because what is available differs by architecture.
 ### `--platform`, for a question about a machine you do not have
 
 ```console
-$ pkgs catalog update --platform linux/x86-64
+$ zpkgs catalog update --platform linux/x86-64
 1915 project(s) → …/catalog/linux-x86-64.json
 ```
 
 It writes to **that platform's** path, so a foreign catalogue cannot be
-mistaken for the host's: `pkgs ls` reads `catalog/<host>.json` and will not
+mistaken for the host's: `zpkgs ls` reads `catalog/<host>.json` and will not
 see it.
 
 `fetchCatalogFor` always took an os and an arch; only this command pinned
 them to the host, and that one line made two measurements impossible from a
 darwin machine — whether a darwin/x86-64 bottle starts, and what
-`bk vulnfetch -catalog` would report for linux before a CI job is wired to
+`zbk vulnfetch -catalog` would report for linux before a CI job is wired to
 run it. Both had been written down twice as *"unmeasured, needs another
 machine"*, which is a note nobody acts on.
 
 With it, from the same laptop:
 
 ```console
-$ bk vulnfetch -dir pantry -catalog catalog/linux-x86-64.json
+$ zbk vulnfetch -dir pantry -catalog catalog/linux-x86-64.json
 133 of them asked AT the version the catalogue publishes; the rest as a whole package
 448 identity(ies) NOT asked: … publishes no version of them for this platform
 133 identity(ies) asked, 1090 not answerable by OSV (repository- or CPE-keyed)
@@ -867,7 +867,7 @@ $ bk vulnfetch -dir pantry -catalog catalog/linux-x86-64.json
 ### And which platforms are there at all?
 
 ```console
-$ pkgs catalog platforms
+$ zpkgs catalog platforms
 darwin/aarch64
 darwin/x86-64
 linux/aarch64
@@ -894,11 +894,11 @@ manifest, and an index in which nothing names a platform are each an error
 with a reason on stderr.
 
 Like `update`, it asks the registry: no local file knows what *exists*, and
-this is the only other command in `pkgs` that cannot work offline.
+this is the only other command in `zpkgs` that cannot work offline.
 
 ### One command fetches it; nothing else does
 
-`pkgs catalog update` is **the only** thing on the read path that asks the
+`zpkgs catalog update` is **the only** thing on the read path that asks the
 registry what exists — `catalog platforms` above asks it too, and is the
 one other command that does, which is why both live under this verb. `ls`,
 `search`, `why`, `browse` and `<TAB>` read the file `update` wrote, and
@@ -935,7 +935,7 @@ go run ./internal/catbench . <catalog.json> 5 97f08e3
 Moving the fetch off the read path left one cost behind: every `<TAB>` decoded
 the whole catalogue. Measured on the real `linux-aarch64` catalogue —
 **481 803 bytes, 1908 projects** (the figure this README used to give as
-"~200 KB", which the catalogue outgrew when `bk catalog --versions` started
+"~200 KB", which the catalogue outgrew when `zbk catalog --versions` started
 sweeping):
 
 | what a press did | median |
@@ -946,7 +946,7 @@ sweeping):
 | **the name index** (38 KB), read + scan | **0.08 ms** |
 
 So the **decode** was all of it, and streaming only the two fields completion
-needs is merely twice as fast — not enough to matter. `pkgs catalog update`
+needs is merely twice as fast — not enough to matter. `zpkgs catalog update`
 therefore also writes `catalog/<os>-<arch>.names`: one line per project, the
 name and the newest version, which is everything `<TAB>` shows. `ls`,
 `--tree`, `search` and `browse` keep reading the catalogue — they need
@@ -959,7 +959,7 @@ project count, both checked on read and both free; and a failed check is not an
 error — it falls back to the catalogue, which is the authority. The index can
 only make completion faster or make it do exactly what it did before.
 
-`pkgs catalog reindex` rebuilds it from the catalogue already on disk, with no
+`zpkgs catalog reindex` rebuilds it from the catalogue already on disk, with no
 network — for an image that **ships** a catalogue, which had no way to get an
 index and so took the slow path in the one environment that can least afford
 it.
@@ -971,7 +971,7 @@ read 25.25 ms at load 89 and 3.78 ms at load 18:
 
 | arm | min | median | above the floor |
 | --- | --- | --- | --- |
-| the floor: `pkgx --version`, no catalogue read | 2.71 ms | 3.05 ms | — |
+| the floor: `zpkgx --version`, no catalogue read | 2.71 ms | 3.05 ms | — |
 | **completion, name index** | 3.07 ms | **3.78 ms** | **+0.73 ms** |
 | completion, decoding the catalogue | 5.97 ms | 6.50 ms | +3.45 ms |
 
@@ -1007,7 +1007,7 @@ browser's no-TTY degradation and a tab completion in it with
 
 ⛔ **Its planted positive is the point.** "Answered offline" and "I forgot
 to cut the network" are the same sentence, and `--network none` is one word
-away from being absent — so `pkgs catalog update`, the one command that
+away from being absent — so `zpkgs catalog update`, the one command that
 must reach the registry, runs in the same configuration and has to **fail,
 about the network**:
 
@@ -1032,18 +1032,18 @@ asserted is that the answers arrive with no network to get them from. The
 numbers above remain the measurement.
 
 The price is that the index goes stale and nothing tells you by magic, so
-every command that reads it says how old it is, and `pkgs catalog` says it
+every command that reads it says how old it is, and `zpkgs catalog` says it
 on its own:
 
 ```console
-$ pkgs catalog
+$ zpkgs catalog
 /home/you/.zpkg/catalog/linux-x86-64.json
 1907 project(s), 905 with dependencies, 2 hour(s) old
 ```
 
-On a machine that has never fetched one, that command and `pkgs ls` both
+On a machine that has never fetched one, that command and `zpkgs ls` both
 name the one that fixes it. A catalogue that is **there and will not parse**
-gets a different sentence, naming the file: "run `pkgs catalog update`" is
+gets a different sentence, naming the file: "run `zpkgs catalog update`" is
 no help at all for that, and sending somebody to a command that cannot work
 is worse than saying nothing.
 
@@ -1052,7 +1052,7 @@ air-gapped image that ships one beside the store, or one being inspected
 before it is published. Set and unreadable is a **refusal**, not a quiet
 fall back to the local store: somebody who names a file means that file.
 
-When there is no catalogue at all, `pkgs ls` falls back to **what is
+When there is no catalogue at all, `zpkgs ls` falls back to **what is
 installed** and says so in its header. That is not a lesser answer offline
 or in a fresh scratch image: it is the only true one available, and the two
 are never merged, because "available" about a mix of a registry and a local
@@ -1083,7 +1083,7 @@ So the binary carries the verdict. Measured against the registry and
 [endoflife.date](https://endoflife.date) on 2026-11-01, `openssl.org`
 publishes 72 tags across nine lines, of which **seven are end-of-life**
 (1.1.1, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6) and two supported — 3.5 (LTS, to
-2030-04-08) and 4.0 (to 2027-05-14). `bk eol -product openssl` is the
+2030-04-08) and 4.0 (to 2027-05-14). `zbk eol -product openssl` is the
 command that judges them.
 
 **It is a rank, not a filter.** `=3.6.4`, `^3.6.4`, `~3.6` and every lock
@@ -1117,7 +1117,7 @@ $ zpkgx --lock seed.lock.hcl -- make
 zpkgx: seed.lock.hcl, 231 pin(s), 3 hour(s) old
 ```
 
-`bk lock` wrote locks and nothing acted on one. A lock nobody consumes is a
+`zbk lock` wrote locks and nothing acted on one. A lock nobody consumes is a
 record, not a mechanism: cargo's `--locked` and npm's `ci` exist because the
 file only means something once a command refuses to deviate from it.
 
@@ -1148,7 +1148,7 @@ for a shell you live in. A lock names *versions*. Two paths, side by side.
 ### And an environment can have one beside it
 
 ```console
-$ pkgs env show cfd
+$ zpkgs env show cfd
 env "cfd"
   description  the solver stack, as validated on 2026-09-01
   declared in  /site/environments/site.hcl2
@@ -1168,16 +1168,16 @@ to attach to anything.
 
 So: `<name>.lock.hcl` beside the file that declared it, named for the
 **environment** because one `.hcl2` can declare several. When it is there,
-`pkge load cfd` uses its pins — *every* pin, including the ones the
+`zpkge load cfd` uses its pins — *every* pin, including the ones the
 manifest never named, which is the difference between a lock and a
 restatement of the manifest.
 
-**It reads; it does not write.** `bk lock` writes locks, because
+**It reads; it does not write.** `zbk lock` writes locks, because
 concretising needs a pantry, an overrides set and a version resolver — none
 of which belong in a runtime that ships to a login node. Spack splits it
 the same way: `spack concretize` writes, `spack install` consumes. A writer
 here could only produce versions with no spec hash, and a lock with empty
-hashes is worse than none — `bk lock --check` would compare `""` against a
+hashes is worse than none — `zbk lock --check` would compare `""` against a
 real hash and report every project as drifted.
 
 A lock from **another platform** is ignored rather than refused: a site
@@ -1189,16 +1189,16 @@ is not.
 ## Environments, and HPC
 
 A module system does two things: it resolves what a package needs, and it edits
-your shell. `pkgx +a +b` already did the first. `pkge` does the second.
+your shell. `zpkgx +a +b` already did the first. `zpkge` does the second.
 
 ```console
-$ eval "$(pkgs env init)"          # in a profile
-$ pkge load gnu.org/sed jq
-$ pkge list
+$ eval "$(zpkgs env init)"          # in a profile
+$ zpkge load gnu.org/sed jq
+$ zpkge list
 gnu.org/sed
 stedolan.github.io/jq
-$ pkge unload jq                   # /usr/bin/jq is back, exactly as it was
-$ pkge save mine ; pkge purge ; pkge restore mine
+$ zpkge unload jq                   # /usr/bin/jq is back, exactly as it was
+$ zpkge save mine ; zpkge purge ; zpkge restore mine
 ```
 
 Loading never edits incrementally: it restores the environment it first saw and
@@ -1215,7 +1215,7 @@ env "cfd" {
 }
 ```
 
-`pkge load cfd` — and `pkgs env avail` / `pkgs env show cfd` to see what a site
+`zpkge load cfd` — and `zpkgs env avail` / `zpkgs env show cfd` to see what a site
 declares and from which file. An environment is not a lockfile: it names
 constraints, and the closure is resolved at load time from the signed registry,
 so a login node and a container agree.
@@ -1232,7 +1232,7 @@ $ zpkgx --modulefile +openmpi.org@5 > $MODULEPATH_DIR/openmpi/5.0.8.lua
 
 ### Without one
 
-`pkgs env init --module` also defines `module` and `ml`, for a container, a
+`zpkgs env init --module` also defines `module` and `ml`, for a container, a
 laptop or a cluster built on this toolchain. It **refuses** to install itself
 where an Lmod already exists, and says to generate modulefiles instead: two
 implementations answering one command is how a support ticket becomes
@@ -1245,7 +1245,7 @@ could act on.
 ### Converting a site's modulefiles
 
 ```console
-$ pkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5 \
+$ zpkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5 \
     > $ZPKG_DIR/environments/site.hcl2
 ```
 
@@ -1256,7 +1256,7 @@ subtly wrong, found inside somebody's job. This refuses anything it would have
 to guess at, names the line, and writes nothing at all if any file was refused.
 
 ```console
-$ pkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
+$ zpkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
 /opt/modulefiles/openmpi.lua: 3 statement(s) this converter will not guess at:
   line 3: not a plain call: this converter reads statements, it does not run Lua
     local root = "/opt/openmpi/5.0.8"
@@ -1269,7 +1269,7 @@ zpkgx: 1 of 2 modulefile(s) not converted — nothing written, because a PARTIAL
 
 ⛔ **The file it writes is a boundary, and since v0.28.0 two more things are
 refused there.** A modulefile is somebody else's file, and the HCL2 this
-generates is config `pkgx env` later evaluates — so whatever a modulefile can
+generates is config `zpkgx env` later evaluates — so whatever a modulefile can
 put into it, it can put into your environment.
 
 - **A name that is not an environment variable name.** `setenv` chooses the
@@ -1325,7 +1325,7 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
   and a warning, not a fall back. See
   [above](#an-abandoned-release-line-is-not-what-you-get-by-default)
 
-By default `pkgx <pkg>` fetches from the signed registry and verifies each
+By default `zpkgx <pkg>` fetches from the signed registry and verifies each
 bottle's signature before running it — no env needed.
 
 ### Two builders, one bottle
@@ -1340,10 +1340,10 @@ and the client counts how many distinct trusted keys it can verify.
 # install nothing that a second builder did not independently reproduce
 export ZPKG_EXTRA_TRUSTED_KEYS='alice:RWQ…'
 export ZPKG_TRUST_THRESHOLD=2
-pkgx +fftw.org
+zpkgx +fftw.org
 ```
 
-`pkgx builds <project>@<version>` shows a **SIGNED BY** column, naming the
+`zpkgx builds <project>@<version>` shows a **SIGNED BY** column, naming the
 signers *as your own trust set names them* — never as the registry does, since
 a name on the artefact is written by whoever pushed it. A row marked `⚠` does
 not meet your threshold and will be refused at install time; a `?` means the
@@ -1356,13 +1356,13 @@ bottle in the registry; Nix and Spack take the same position). So *what made
 this* and *who vouches for it* are two questions, and the table answers both:
 
 ```
-$ pkgs builds --platform linux/x86-64 lz4.org@1.10.0
+$ zpkgs builds --platform linux/x86-64 lz4.org@1.10.0
 HASH    INSTALLED  PUBLISHED  SIGNED BY  BUILT BY    WHAT
 (none)  -          yes        go-zpkg    bk@v0.26.0  nothing recorded
 ```
 
 `not recorded` means the bottle carries no provenance, `?` that the registry
-was never asked, and `bk (no version)` a builder id that names a tool and not
+was never asked, and `zbk (no version)` a builder id that names a tool and not
 a release — all three are different facts and none of them is the others.
 
 Flags come **before** the project, as Go's flag parsing requires.
@@ -1427,11 +1427,11 @@ object file: No such file or directory
 ```
 
 Every ELF, not one package: `+gnu.org/coreutils -- env` died the same way on
-`libc.so.6`, and `pkgx --lock` could not run a lock at all. Supplying the same
+`libc.so.6`, and `zpkgx --lock` could not run a lock at all. Supplying the same
 path from outside the container made the identical command print `2`, which is
 what located it.
 
-The quiet part: `pkgx +jq` **printed** a complete environment the whole time,
+The quiet part: `zpkgx +jq` **printed** a complete environment the whole time,
 because the print path already posed the loader first. Reading the two outputs
 side by side showed nothing wrong with either; only running the second one did.
 
