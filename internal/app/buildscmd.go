@@ -10,7 +10,7 @@ import (
 	"github.com/go-zpkg/artifact"
 )
 
-// `zpkgs builds <project>@<version>` — which builds of one version exist.
+// `zpks builds <project>@<version>` — which builds of one version exist.
 //
 // # WHY IT HAD TO EXIST
 //

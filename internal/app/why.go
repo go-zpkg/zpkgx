@@ -8,11 +8,11 @@ import (
 	"github.com/go-zpkg/artifact"
 )
 
-// `zpkgx why <project> <dependency>` — WHICH LINK put it there.
+// `zpkx why <project> <dependency>` — WHICH LINK put it there.
 //
 // # A THIRD QUESTION, NOT A VIEW OF THE OTHER TWO
 //
-// `zpkgx ls --tree` says what is in a closure. `zpkgx ls --dependents` says
+// `zpkx ls --tree` says what is in a closure. `zpkx ls --dependents` says
 // who is affected by a change. Neither says WHY a particular thing is in a
 // particular closure, and that is the question somebody has when they look
 // at a closure and find something they did not ask for.

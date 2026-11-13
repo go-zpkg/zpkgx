@@ -24,7 +24,7 @@ jobs:
   # ⛔ AND THE `go` DIRECTIVE IS THE TOOLCHAIN. This lane always pinned
   # go-version 1.27.2, so what CI built was never vulnerable -- but the
   # install instruction on the landing page is `go install
-  # github.com/go-zpkg/zpkgx@latest`, which builds with the READER's
+  # github.com/go-zpkg/zpkx@latest`, which builds with the READER's
   # toolchain, and a directive of 1.27.1 let 1.27.1 do it. Raising it alone
   # took this module from 22 findings to 1, a notice with no released fix.
   vuln:
@@ -148,12 +148,12 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -ldflags='-s -w' -o zpkgx-${{ matrix.goos }}-${{ matrix.goarch }} .
+        run: go build -ldflags='-s -w' -o zpkx-${{ matrix.goos }}-${{ matrix.goarch }} .
 
-  # Proof-of-concept: build zpkgx.exe natively on a real Windows runner, fabricate
+  # Proof-of-concept: build zpkx.exe natively on a real Windows runner, fabricate
   # a tiny Windows pkgx artifact (a PE built by the runner's Go toolchain, laid out
   # as <project>/windows/x86-64/{versions.txt,v1.0.0.tar.gz}), serve dist/ over
-  # HTTP, and prove `zpkgx.exe <project>` fetches the artifact, resolves the .exe,
+  # HTTP, and prove `zpkx.exe <project>` fetches the artifact, resolves the .exe,
   # execs it, and both its output AND its exit code propagate.
   #
   # NB: pkgx depends on github.com/go-zpkg/artifact via a tagged version; the
@@ -167,20 +167,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          path: zpkgx
+          path: zpkx
       - uses: actions/setup-go@v7
         with:
           go-version: '1.27.4'
 
-      - name: Build zpkgx.exe (native windows/amd64)
-        working-directory: zpkgx
+      - name: Build zpkx.exe (native windows/amd64)
+        working-directory: zpkx
         env:
           CGO_ENABLED: "0"
-        run: go build -o zpkgx.exe .
+        run: go build -o zpkx.exe .
 
       - name: Fabricate a tiny windows artifact (hello.exe)
         shell: pwsh
-        working-directory: zpkgx
+        working-directory: zpkx
         run: |
           $proj = "hello.test"; $ver = "1.0.0"; $slug = "x86-64"
           New-Item -ItemType Directory -Force -Path hello | Out-Null
@@ -208,9 +208,9 @@ jobs:
           Set-Content "dist/$proj/package.yml" "provides:`n  - bin/hello`n"
           Get-ChildItem -Recurse dist | Select-Object FullName
 
-      - name: Serve dist/ and run zpkgx.exe
+      - name: Serve dist/ and run zpkx.exe
         shell: pwsh
-        working-directory: zpkgx
+        working-directory: zpkx
         run: |
           # Serve the fixture with Go, not `python -m http.server`. On a Windows
           # runner `python` can resolve to the Microsoft Store app-execution
@@ -257,13 +257,13 @@ jobs:
           $env:ZPKG_VERIFY = "0"
           try {
             # 1. output round-trip
-            $out = (& .\zpkgx.exe hello.test 2>&1 | Out-String).Trim()
-            Write-Host "zpkgx.exe hello.test => $out"
+            $out = (& .\zpkx.exe hello.test 2>&1 | Out-String).Trim()
+            Write-Host "zpkx.exe hello.test => $out"
             if ($out -notmatch 'hello from pkgx artifact \(win\)') {
               throw "expected greeting, got: $out"
             }
             # 2. arg passing + exit-code propagation through execWindows
-            & .\zpkgx.exe hello.test fail
+            & .\zpkx.exe hello.test fail
             if ($LASTEXITCODE -ne 3) {
               throw "expected exit code 3, got $LASTEXITCODE"
             }

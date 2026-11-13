@@ -42,7 +42,7 @@ type environment struct {
 
 	// The raw environment operations an IMPORTED modulefile carries. A site's
 	// modulefile points at trees the site installed, not at artifacts, so there is
-	// no package to name — `zpkgx env import` converts those statements into
+	// no package to name — `zpkx env import` converts those statements into
 	// these, once, in front of a person.
 	Prepend  map[string][]string
 	Append   map[string][]string
@@ -70,13 +70,13 @@ var envBodySchema = &hcl.BodySchema{
 
 // environmentDirs lists the directories scanned for *.hcl2, nearest last so a
 // user's own file wins over a site's.
-func environmentDirs(zpkgxDir, home string) []string {
+func environmentDirs(zpkxDir, home string) []string {
 	var dirs []string
 	if v := os.Getenv("ZPKG_ENVIRONMENTS"); v != "" {
 		dirs = append(dirs, filepath.SplitList(v)...)
 	}
-	if zpkgxDir != "" {
-		dirs = append(dirs, filepath.Join(zpkgxDir, "environments"))
+	if zpkxDir != "" {
+		dirs = append(dirs, filepath.Join(zpkxDir, "environments"))
 	}
 	// ⛔ NOT `~/.pkgx`. This read the retired store's directory long after
 	// artifact.Dir() moved to `~/.zpkg` (artifact/pkgx.go:385), so a user's
@@ -142,12 +142,12 @@ func parseEnvironmentFile(path string, warn func(string)) map[string]environment
 			// Iterate rather than gocty.FromCtyValue: HCL types a literal
 			// ["a","b"] as a TUPLE, not a list, so asking for []string fails with
 			// "list or set value is required" on a file that is perfectly correct.
-			zpkgs, err := stringsOf(v)
+			zpks, err := stringsOf(v)
 			if err != nil {
 				warn(fmt.Sprintf("ignoring env %q in %s: packages must be a list of strings: %v", name, path, err))
 				continue
 			}
-			e.Packages = zpkgs
+			e.Packages = zpks
 		}
 		if attr, ok := body.Attributes["description"]; ok {
 			if v, diags := attr.Expr.Value(nil); !diags.HasErrors() && v.Type() == cty.String {
@@ -239,7 +239,7 @@ func expandSpecs(specs []string, envs map[string]environment) []string {
 }
 
 // envLockWarn is where a lock's complaints go: stderr, never stdout, since
-// `eval "$(zpkge load cfd)"` is reading the other one.
+// `eval "$(zpke load cfd)"` is reading the other one.
 var envLockWarn = func(msg string) { fmt.Fprintln(os.Stderr, tool+":", msg) }
 
 // sortedEnvironments returns the environments by name, for `avail`.

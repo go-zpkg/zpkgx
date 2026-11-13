@@ -49,15 +49,15 @@ import (
 //
 // The protocol:
 //
-//	ZPKG_GET_COMPLETIONS=<n> zpkgx <arg0> <arg1> … <argN>
+//	ZPKG_GET_COMPLETIONS=<n> zpkx <arg0> <arg1> … <argN>
 //
 // prints one `value\tdescription` per line and exits 0. The description is
 // what zsh and fish show beside the candidate; bash ignores it.
 //
-// n indexes the arguments AS PKGX RECEIVES THEM — `zpkgx` itself is not one
+// n indexes the arguments AS PKGX RECEIVES THEM — `zpkx` itself is not one
 // of them. Every shell counts its own words WITH the command, so each
 // snippet below subtracts one. That off-by-one is not a detail: with it
-// wrong, `zpkgx +gnu.org/ba<TAB>` reads past the end of the arguments, finds
+// wrong, `zpkx +gnu.org/ba<TAB>` reads past the end of the arguments, finds
 // the empty string, and offers the subcommand list — which is what this
 // did when first run against a real store.
 
@@ -72,7 +72,7 @@ import (
 // never reused — which is a
 // completion nobody would leave switched on.
 //
-// `zpkgx catalog update` is the only path that fetches. `guix pull` and
+// `zpkx catalog update` is the only path that fetches. `guix pull` and
 // `nix-channel --update` draw the same line in the same place.
 //
 // Two sources, in order:
@@ -81,7 +81,7 @@ import (
 //	                      ships one beside the store, or a catalogue being
 //	                      inspected before it is published. Set and
 //	                      unreadable is an ERROR, never a quiet fallback.
-//	$ZPKG_DIR/catalog/…   what `zpkgx catalog update` wrote.
+//	$ZPKG_DIR/catalog/…   what `zpkx catalog update` wrote.
 //
 // Absent is not an error: it is every fresh machine, and the caller falls
 // back to what is installed.
@@ -165,7 +165,7 @@ func installedCatalog(dir string) artifact.Catalog {
 //
 // The two are NOT merged. A merged list would say "available" about things
 // from two sources with different truth — one of them a cache of unknown age
-// — and `zpkgx ls` would have no honest header to print. Which one answered
+// — and `zpkx ls` would have no honest header to print. Which one answered
 // is returned, so the caller can say.
 func browseCatalog(dir string) (artifact.Catalog, string, error) {
 	named := os.Getenv("ZPKG_CATALOG")
@@ -196,8 +196,8 @@ func browseCatalog(dir string) (artifact.Catalog, string, error) {
 // runLs shows what is under a node — and a node has TWO kinds of thing
 // under it.
 //
-//	zpkgx ls gnu.org        what that namespace CONTAINS
-//	zpkgx ls curl.se        what that package NEEDS
+//	zpkx ls gnu.org        what that namespace CONTAINS
+//	zpkx ls curl.se        what that package NEEDS
 //
 // The same words, "what is available under this node", mean containment at
 // a namespace and dependency at a package, and a browser has to answer
@@ -242,7 +242,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	// Two different falls back to the store, and they want two different
-	// sentences. "Run zpkgx catalog update" is the fix for a machine that
+	// sentences. "Run zpkx catalog update" is the fix for a machine that
 	// has never fetched one; it is NOT the fix for a file that is there
 	// and will not parse, and telling someone to run a command that
 	// cannot help is worse than saying nothing.
@@ -329,7 +329,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// printDepTree draws the subtree the way `zpkgx --graph` already draws one.
+// printDepTree draws the subtree the way `zpkx --graph` already draws one.
 func printDepTree(w io.Writer, ns []artifact.DepNode, level int, swept bool) {
 	for _, n := range ns {
 		note := ""
@@ -374,8 +374,8 @@ func versionNote(cat artifact.Catalog, p artifact.CatalogProject) string {
 //
 // nix and guix show the state of the store in everything they print, and
 // here nothing did: a catalogue says what EXISTS, and a reader standing in
-// front of it mostly wants to know what they already have. `zpkgx ls
-// curl.se` before and after `zpkgx curl.se --version` printed the same page.
+// front of it mostly wants to know what they already have. `zpkx ls
+// curl.se` before and after `zpkx curl.se --version` printed the same page.
 //
 // A bare ✓ when what is installed is the version on offer, and `✓ <version>`
 // when it is NOT — which is the case worth the extra word, because it is
@@ -496,8 +496,8 @@ type completion struct{ value, note string }
 // completionsFor is the completion of ONE word.
 //
 // A `+pkg` word keeps its plus: the shell replaces the whole word, so a
-// candidate that dropped it would turn `zpkgx +gnu.org/ba<TAB>` into
-// `zpkgx gnu.org/bash` — a different command.
+// candidate that dropped it would turn `zpkx +gnu.org/ba<TAB>` into
+// `zpkx gnu.org/bash` — a different command.
 func completionsFor(word string) []completion {
 	plus := strings.HasPrefix(word, "+")
 	bare := strings.TrimPrefix(word, "+")
@@ -505,12 +505,12 @@ func completionsFor(word string) []completion {
 	// A word that is not a package at all: offer the subcommands, once,
 	// when nothing has been typed that looks like a path.
 	//
-	// ⛔ ONLY UNDER `zpkgs`. These are its verbs, and offering them at a
-	// zpkgx prompt would put `ls` back in front of gnu.org/coreutils' ls —
+	// ⛔ ONLY UNDER `zpks`. These are its verbs, and offering them at a
+	// zpkx prompt would put `ls` back in front of gnu.org/coreutils' ls —
 	// in the one place a user is least able to tell which they are being
 	// offered, since a completion shows a word and no provenance.
 	var out []completion
-	if tool == "zpkgs" && !plus && !strings.Contains(bare, "/") && !strings.Contains(bare, ".") {
+	if tool == "zpks" && !plus && !strings.Contains(bare, "/") && !strings.Contains(bare, ".") {
 		for _, s := range subcommandCompletions {
 			if strings.HasPrefix(s.value, bare) {
 				out = append(out, s)
@@ -559,12 +559,12 @@ var subcommandCompletions = []completion{
 // runCompletionSnippet prints the few lines a shell needs.
 //
 // Few, because they do nothing but call the binary: the registry changes
-// without zpkgx changing, so anything cleverer here would be a second place
+// without zpkx changing, so anything cleverer here would be a second place
 // to keep level with the first. There is no completion framework to install
 // and nothing to generate, which is what makes this work in a scratch image.
 // It prints the snippet for BOTH binaries, because a person installing
-// completion wants to complete what they type, and they type both: `zpkgx`
-// takes package names, `zpkgs` takes a verb and then a node. One eval, two
+// completion wants to complete what they type, and they type both: `zpkx`
+// takes package names, `zpks` takes a verb and then a node. One eval, two
 // `complete` registrations, and the two differ only in the word.
 func runCompletionSnippet(shell string, stdout, stderr io.Writer) int {
 	t, ok := completionTemplates[shell]
@@ -572,7 +572,7 @@ func runCompletionSnippet(shell string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, pfx()+"usage: "+tool+" completion bash|zsh|fish")
 		return 2
 	}
-	for _, name := range []string{"zpkgx", "zpkgs"} {
+	for _, name := range []string{"zpkx", "zpks"} {
 		fmt.Fprint(stdout, strings.ReplaceAll(t, toolToken, name))
 	}
 	return 0
@@ -588,7 +588,7 @@ func runCompletionSnippet(shell string, stdout, stderr io.Writer) int {
 const toolToken = "@TOOL@"
 
 var completionTemplates = map[string]string{
-	"bash": `# @TOOL@ completion — eval "$(zpkgs completion bash)"
+	"bash": `# @TOOL@ completion — eval "$(zpks completion bash)"
 _@TOOL@_complete() {
   local i n=0 words=()
   for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
@@ -600,7 +600,7 @@ _@TOOL@_complete() {
 }
 complete -o nospace -F _@TOOL@_complete @TOOL@
 `,
-	"zsh": `# @TOOL@ completion — eval "$(zpkgs completion zsh)"
+	"zsh": `# @TOOL@ completion — eval "$(zpks completion zsh)"
 _@TOOL@_complete() {
   local -a lines
   lines=(${(f)"$(ZPKG_GET_COMPLETIONS=$((CURRENT - 1)) @TOOL@ ${words[2,-1]} 2>/dev/null)"})
@@ -614,7 +614,7 @@ _@TOOL@_complete() {
 }
 compdef _@TOOL@_complete @TOOL@
 `,
-	"fish": `# @TOOL@ completion — zpkgs completion fish | source
+	"fish": `# @TOOL@ completion — zpks completion fish | source
 function __@TOOL@_complete
   set -l words (commandline -opc) (commandline -ct)
   ZPKG_GET_COMPLETIONS=(math (count $words) - 2) @TOOL@ $words[2..-1] 2>/dev/null

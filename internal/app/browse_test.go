@@ -40,7 +40,7 @@ func withCatalog(t *testing.T, c artifact.Catalog, err error) {
 	// catalogFor was silently answered from whatever index the developer's
 	// machine had. TestCompletionCarriesTheMark passed in CI, where there is
 	// no ~/.pkgx, and failed the moment this machine had run
-	// `zpkgx catalog reindex`.
+	// `zpkx catalog reindex`.
 	//
 	// Saying "there is no index" rather than pointing it at a temporary
 	// directory: a test about the CATALOGUE should take the catalogue path,
@@ -161,7 +161,7 @@ func TestLsFallsBackToTheStoreAndSaysSo(t *testing.T) {
 }
 
 // The off-by-one that the first real run exposed: with the index wrong,
-// `zpkgx +gnu.org/ba<TAB>` reads past the arguments, finds "", and offers the
+// `zpkx +gnu.org/ba<TAB>` reads past the arguments, finds "", and offers the
 // subcommand list.
 func TestCompletionIndexesTheArgumentsPkgxReceives(t *testing.T) {
 	withCatalog(t, testCatalog(), nil)
@@ -182,7 +182,7 @@ func TestCompletionIndexesTheArgumentsPkgxReceives(t *testing.T) {
 		t.Errorf("index 0 should complete the FIRST argument; got %q", got)
 	}
 	// The plus is kept: the shell replaces the whole word, and a candidate
-	// without it would turn `zpkgx +x` into `zpkgx x` — a different command.
+	// without it would turn `zpkx +x` into `zpkx x` — a different command.
 	if strings.Contains(run("0", "+gnu.org/ba"), "\ngnu.org/bash") {
 		t.Error("a +word completed to a bare project")
 	}
@@ -236,7 +236,7 @@ func TestCompletionSnippets(t *testing.T) {
 		if !strings.Contains(s, completionsEnv+"=") {
 			t.Errorf("%s snippet does not set %s:\n%s", sh, completionsEnv, s)
 		}
-		// Every shell counts its words WITH the command; zpkgx does not see
+		// Every shell counts its words WITH the command; zpkx does not see
 		// that word. A snippet that forgot to subtract is the defect this
 		// asserts away.
 		if !strings.Contains(s, "- 1)") && !strings.Contains(s, "- 2)") {
@@ -267,8 +267,8 @@ func depTestCatalog() artifact.Catalog {
 // THE THING THE WHOLE FEATURE IS FOR. A node has two kinds of thing under
 // it, and which one `ls` shows is decided by what the node IS:
 //
-//	zpkgx ls gnu.org    what the namespace CONTAINS
-//	zpkgx ls curl.se    what the package NEEDS
+//	zpkx ls gnu.org    what the namespace CONTAINS
+//	zpkx ls curl.se    what the package NEEDS
 func TestLsOfAPackageShowsWhatItNeeds(t *testing.T) {
 	withCatalog(t, depTestCatalog(), nil)
 	var out, errb bytes.Buffer
@@ -290,7 +290,7 @@ func TestLsOfAPackageShowsWhatItNeeds(t *testing.T) {
 		t.Errorf("an unknown dependency is not marked:\n%s", got)
 	}
 	// curl.se is ALSO a namespace, and that must not become unreachable.
-	if !strings.Contains(got, "also a namespace, 1 under it: zpkgx ls curl.se/") {
+	if !strings.Contains(got, "also a namespace, 1 under it: zpkx ls curl.se/") {
 		t.Errorf("the namespace half is not offered:\n%s", got)
 	}
 }

@@ -1,10 +1,10 @@
-// Command zpkgs answers about packages: what the registry has, what this
+// Command zpks answers about packages: what the registry has, what this
 // disk holds, what needs what, and where a catalogue comes from.
 //
-// It is the other half of `zpkgx`, which RUNS packages and keeps upstream
+// It is the other half of `zpkx`, which RUNS packages and keeps upstream
 // pkgx's grammar — the first argument that is not a flag is a package. The
 // nine verbs this binary owns used to sit in that position, and two of them
-// shadowed commands `gnu.org/coreutils` provides: `zpkgx ls` listed a
+// shadowed commands `gnu.org/coreutils` provides: `zpkx ls` listed a
 // catalogue where upstream runs GNU ls, and there was no way to ask for the
 // other one.
 //
@@ -16,7 +16,7 @@ package main
 import (
 	"os"
 
-	"github.com/go-zpkg/zpkgx/internal/app"
+	"github.com/go-zpkg/zpkx/internal/app"
 )
 
 func main() { os.Exit(app.Pkgs(os.Args[1:])) }

@@ -12,7 +12,7 @@ package app
 // from an environment variable to a line of Go in ONE module. This package is
 // `internal`, so `zpkgm`, `bk` and `mirror` could not reach the list even if
 // someone had thought to: measured 2026-11-03, `zpkgm install 'openssl.org@^3'`
-// — the INSTALLER — put the end-of-life 3.6.4 on a clean machine while `zpkgx`
+// — the INSTALLER — put the end-of-life 3.6.4 on a clean machine while `zpkx`
 // gave 3.5.8 from the same registry.
 //
 // artifact v0.63.0 carries the list itself (go-zpkg/artifact#186), so every
@@ -28,4 +28,4 @@ package app
 // fall back to the default.
 //
 // The file is kept, empty of behaviour, because the next person to ask "where
-// does zpkgx turn this on?" should find this answer rather than silence.
+// does zpkx turn this on?" should find this answer rather than silence.

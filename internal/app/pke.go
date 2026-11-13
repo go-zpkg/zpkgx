@@ -1,13 +1,13 @@
 package app
 
-// The module front-end: `zpkge load/unload/purge/list/save/restore`, an
-// Lmod-shaped command over zpkgx's own resolution.
+// The module front-end: `zpke load/unload/purge/list/save/restore`, an
+// Lmod-shaped command over zpkx's own resolution.
 //
 // The design decision that makes it exact: state lives in the ENVIRONMENT and
-// is read back by zpkgx, not by the shell.
+// is read back by zpkx, not by the shell.
 //
-//   ZPKGE_SPECS  the package set currently loaded, space-separated
-//   ZPKGE_BASE   the ORIGINAL value of every variable zpkgx has touched,
+//   ZPKE_SPECS  the package set currently loaded, space-separated
+//   ZPKE_BASE   the ORIGINAL value of every variable zpkx has touched,
 //                  base64 of NUL-separated NAME=value records
 //
 // The records are separated by NUL, not by a newline. base64 protects the
@@ -38,36 +38,53 @@ import (
 // modState is the front-end's state, decoded from the environment.
 type modState struct {
 	specs []string
-	base  map[string]string // variable -> value before zpkgx first touched it
+	base  map[string]string // variable -> value before zpkx first touched it
 	// had records whether the variable EXISTED before. Restoring a variable that
 	// was previously unset means unsetting it, not setting it empty: an empty
 	// PATH and no PATH are different to every program that reads one.
 	had map[string]bool
 }
 
-// ⛔⛔ A PROFILE WRITTEN BEFORE THE RENAME EXPORTS PKGE_*, AND SILENCE IS THE
-// WORST ANSWER. The zpkge function lives in the user's shell profile, so an
-// old one goes on setting PKGE_SPECS/PKGE_BASE while this binary reads
-// ZPKGE_*. Nothing errors: `zpkge list` prints nothing, `unload` unloads
-// nothing, `purge` restores nothing — and the packages stay on PATH, so the
-// shell looks right while the state is invisible.
+// ⛔⛔ A PROFILE WRITTEN BEFORE A RENAME EXPORTS THE OLD NAMES, AND SILENCE IS
+// THE WORST ANSWER. The zpke function lives in the user's shell profile, so an
+// old one goes on setting its own spelling while this binary reads ZPKE_*.
+// Nothing errors: `zpke list` prints nothing, `unload` unloads nothing,
+// `purge` restores nothing — and the packages stay on PATH, so the shell looks
+// right while the state is invisible.
 //
-// It is REFUSED, not read. Reading the old name would be an alias for a
+// They are REFUSED, not read. Reading an old name would be an alias for a
 // retired spelling, which is the thing being removed; and the fix is one line
 // the user already knows from the verb split. Same shape as staleEnvCall in
 // query.go, and the same remedy sentence.
-func staleModState(getenv func(string) string) bool {
-	if getenv("ZPKGE_SPECS") != "" || getenv("ZPKGE_BASE") != "" {
-		return false // a current profile: nothing to say
+//
+// ⛔⛔ THERE ARE NOW TWO RETIRED GENERATIONS, AND THE SECOND WAS ALMOST MISSED
+// BY THE RENAME THAT CREATED IT. `zpkge` → `zpke` moved the current spelling
+// from ZPKGE_* to ZPKE_*; a sweep that only rewrote this function's constants
+// would have left it detecting PKGE_* and ZPKE_* while saying nothing about
+// ZPKGE_* — which is what every profile written up to today exports, and
+// precisely the silence this exists to prevent. A rename does not only change
+// what is current; it ADDS a generation to what must be refused.
+func staleModPrefix(getenv func(string) string) (string, bool) {
+	if getenv("ZPKE_SPECS") != "" || getenv("ZPKE_BASE") != "" {
+		return "", false // a current profile: nothing to say
 	}
-	return getenv("PKGE_SPECS") != "" || getenv("PKGE_BASE") != ""
+	for _, p := range retiredModPrefixes {
+		if getenv(p+"SPECS") != "" || getenv(p+"BASE") != "" {
+			return p, true
+		}
+	}
+	return "", false
 }
 
-// loadModState reads ZPKGE_SPECS and ZPKGE_BASE from the environment.
+// retiredModPrefixes are the spellings this binary no longer reads, newest
+// first. Each one was the current name of the same two variables.
+var retiredModPrefixes = []string{"ZPKGE_", "PKGE_"}
+
+// loadModState reads ZPKE_SPECS and ZPKE_BASE from the environment.
 func loadModState(getenv func(string) string) modState {
 	st := modState{base: map[string]string{}, had: map[string]bool{}}
-	st.specs = strings.Fields(getenv("ZPKGE_SPECS"))
-	raw, err := base64.StdEncoding.DecodeString(getenv("ZPKGE_BASE"))
+	st.specs = strings.Fields(getenv("ZPKE_SPECS"))
+	raw, err := base64.StdEncoding.DecodeString(getenv("ZPKE_BASE"))
 	if err != nil {
 		return st // unreadable state is treated as none: the next load recaptures
 	}
@@ -87,7 +104,7 @@ func loadModState(getenv func(string) string) modState {
 	return st
 }
 
-// encode renders the state's base for ZPKGE_BASE.
+// encode renders the state's base for ZPKE_BASE.
 func (st modState) encode() string {
 	names := make([]string, 0, len(st.base))
 	for n := range st.base {
@@ -139,44 +156,44 @@ func shellQuote(s string) string {
 }
 
 // shellInit is the front-end itself: a shell function, printed for
-// `eval "$(zpkgs env init)"` in a profile. It is deliberately thin — every
+// `eval "$(zpks env init)"` in a profile. It is deliberately thin — every
 // decision is made by the Go code, which can be tested; the function only
 // evaluates what that prints.
 //
-// ⛔ IT CALLS `zpkgs env`, NOT `zpkgx env`. The verb moved when `zpkgs` was
+// ⛔ IT CALLS `zpks env`, NOT `zpkx env`. The verb moved when `zpks` was
 // split out, and this text is the one place where the binary's name is
 // baked into something a user keeps — a profile sourced for months. A
-// function left calling `zpkgx env load` would fail with zpkgx's "no such
+// function left calling `zpkx env load` would fail with zpkx's "no such
 // package: env" long after anyone remembered why.
-const shellInit = `zpkge() {
-  _zpkge_cmd="${1-}"; [ $# -gt 0 ] && shift
-  case "$_zpkge_cmd" in
+const shellInit = `zpke() {
+  _zpke_cmd="${1-}"; [ $# -gt 0 ] && shift
+  case "$_zpke_cmd" in
     load|unload|purge)
-      _zpkge_out=$(command zpkgs env "$_zpkge_cmd" "$@") || return $?
-      eval "$_zpkge_out" ;;
+      _zpke_out=$(command zpks env "$_zpke_cmd" "$@") || return $?
+      eval "$_zpke_out" ;;
     list)
       # shellcheck disable=SC2086
-      [ -n "${ZPKGE_SPECS-}" ] && printf '%s\n' ${ZPKGE_SPECS} ;;
+      [ -n "${ZPKE_SPECS-}" ] && printf '%s\n' ${ZPKE_SPECS} ;;
     save)
-      [ -n "${1-}" ] || { echo "zpkge save <name>" >&2; return 2; }
+      [ -n "${1-}" ] || { echo "zpke save <name>" >&2; return 2; }
       mkdir -p "${ZPKG_DIR:-$HOME/.zpkg}/collections" &&
-      printf '%s\n' "${ZPKGE_SPECS-}" > "${ZPKG_DIR:-$HOME/.zpkg}/collections/$1" ;;
+      printf '%s\n' "${ZPKE_SPECS-}" > "${ZPKG_DIR:-$HOME/.zpkg}/collections/$1" ;;
     restore)
-      [ -n "${1-}" ] || { echo "zpkge restore <name>" >&2; return 2; }
-      _zpkge_f="${ZPKG_DIR:-$HOME/.zpkg}/collections/$1"
-      [ -r "$_zpkge_f" ] || { echo "zpkge: no collection $1" >&2; return 1; }
-      zpkge purge || return $?
+      [ -n "${1-}" ] || { echo "zpke restore <name>" >&2; return 2; }
+      _zpke_f="${ZPKG_DIR:-$HOME/.zpkg}/collections/$1"
+      [ -r "$_zpke_f" ] || { echo "zpke: no collection $1" >&2; return 1; }
+      zpke purge || return $?
       # shellcheck disable=SC2046
-      zpkge load $(cat "$_zpkge_f") ;;
+      zpke load $(cat "$_zpke_f") ;;
     ""|help|-h|--help)
-      echo "usage: zpkge load|unload <pkg>... | purge | list | save|restore <name>" >&2 ;;
+      echo "usage: zpke load|unload <pkg>... | purge | list | save|restore <name>" >&2 ;;
     *)
-      echo "zpkge: unknown command $_zpkge_cmd" >&2; return 2 ;;
+      echo "zpke: unknown command $_zpke_cmd" >&2; return 2 ;;
   esac
 }
 `
 
-// moduleShim defines `module` and `ml` in terms of zpkge — for a machine that
+// moduleShim defines `module` and `ml` in terms of zpke — for a machine that
 // has NO Lmod, which is the point: a container, a laptop, a cluster built on
 // this toolchain. Users keep the command they know and their job scripts keep
 // working, without a Lua interpreter and without a modulefile tree.
@@ -184,34 +201,34 @@ const shellInit = `zpkge() {
 // It REFUSES to install itself where an Lmod exists. Two implementations
 // answering one command is how a support ticket becomes unanswerable, and the
 // site's own modulefiles are not ours to interpret. There, the right move is
-// the other direction — generate modulefiles with `zpkgx --modulefile` and let
+// the other direction — generate modulefiles with `zpkx --modulefile` and let
 // the site's Lmod load them.
 const moduleShim = `
 if command -v lmod >/dev/null 2>&1 || [ -n "${LMOD_CMD-}" ] || [ -n "${MODULESHOME-}" ]; then
-  echo "zpkgx: an existing module system was found; not defining module()." >&2
-  echo "zpkgx: publish modulefiles to MODULEPATH instead: zpkgx --modulefile +pkg" >&2
+  echo "zpkx: an existing module system was found; not defining module()." >&2
+  echo "zpkx: publish modulefiles to MODULEPATH instead: zpkx --modulefile +pkg" >&2
 else
   module() {
-    _zpkge_sub="${1-}"; [ $# -gt 0 ] && shift
-    case "$_zpkge_sub" in
-      load|add)        zpkge load "$@" ;;
-      unload|rm|del)   zpkge unload "$@" ;;
-      purge)           zpkge purge ;;
-      list)            zpkge list ;;
-      avail|av)        command zpkgs env avail ;;
+    _zpke_sub="${1-}"; [ $# -gt 0 ] && shift
+    case "$_zpke_sub" in
+      load|add)        zpke load "$@" ;;
+      unload|rm|del)   zpke unload "$@" ;;
+      purge)           zpke purge ;;
+      list)            zpke list ;;
+      avail|av)        command zpks env avail ;;
       show|display|whatis)
                        [ -n "${1-}" ] || { echo "module show <environment>" >&2; return 2; }
-                       command zpkgs env show "$1" ;;
-      save)            zpkge save "$@" ;;
-      restore)         zpkge restore "$@" ;;
+                       command zpks env show "$1" ;;
+      save)            zpke save "$@" ;;
+      restore)         zpke restore "$@" ;;
       swap|switch)
                        # module swap OLD NEW, and the one-argument form that
                        # swaps whatever of that project is loaded.
-                       if [ $# -eq 2 ]; then zpkge unload "$1" && zpkge load "$2"
-                       else zpkge load "$1"; fi ;;
+                       if [ $# -eq 2 ]; then zpke unload "$1" && zpke load "$2"
+                       else zpke load "$1"; fi ;;
       ""|help|-h|--help)
                        echo "usage: module load|unload|purge|list|avail|show|save|restore|swap" >&2 ;;
-      *)               echo "module: unsupported subcommand $_zpkge_sub" >&2; return 2 ;;
+      *)               echo "module: unsupported subcommand $_zpke_sub" >&2; return 2 ;;
     esac
   }
   ml() {
@@ -242,10 +259,14 @@ func modeShellInit(module bool, stdout io.Writer) error {
 // the base, and recompute. `purge` is simply the empty set.
 func modeShell(action string, args []string, compose func([]string) (composed, error), getenv func(string) (string, bool), stdout io.Writer) error {
 	get1 := func(n string) string { v, _ := getenv(n); return v }
-	if staleModState(get1) {
-		return fmt.Errorf("your zpkge function is from before the rename: it sets PKGE_SPECS/PKGE_BASE, which this zpkgx no longer reads (they are ZPKGE_*)\n" +
-			"re-run: eval \"$(zpkgs env init)\"\n" +
-			"the packages on your PATH are still there; this refuses rather than act on state it cannot see")
+	if p, ok := staleModPrefix(get1); ok {
+		// ⛔ THE MESSAGE NAMES THE SPELLING FOUND, not a fixed one. With two
+		// retired generations, a message hard-coding PKGE_* would tell a
+		// reader whose profile says ZPKGE_* to look for a variable they do
+		// not have, and the one line that fixes it would read as unrelated.
+		return fmt.Errorf("your zpke function is from before a rename: it sets %[1]sSPECS/%[1]sBASE, which this zpkx no longer reads (they are ZPKE_*)\n"+
+			"re-run: eval \"$(zpks env init)\"\n"+
+			"the packages on your PATH are still there; this refuses rather than act on state it cannot see", p)
 	}
 	st := loadModState(get1)
 
@@ -303,19 +324,19 @@ func modeShell(action string, args []string, compose func([]string) (composed, e
 	if len(specs) == 0 {
 		// Nothing loaded: the state goes too, so a later load captures a fresh
 		// base rather than one recorded in a previous life of this shell.
-		fmt.Fprintln(stdout, "unset ZPKGE_SPECS")
-		fmt.Fprintln(stdout, "unset ZPKGE_BASE")
+		fmt.Fprintln(stdout, "unset ZPKE_SPECS")
+		fmt.Fprintln(stdout, "unset ZPKE_BASE")
 		fmt.Fprintln(stdout, "unset LOADEDMODULES")
 		return nil
 	}
-	fmt.Fprintf(stdout, "export ZPKGE_SPECS=%s\n", shellQuote(strings.Join(specs, " ")))
+	fmt.Fprintf(stdout, "export ZPKE_SPECS=%s\n", shellQuote(strings.Join(specs, " ")))
 	// LOADEDMODULES in Lmod's own spelling (colon-separated), because job
 	// scripts READ it — `if [[ $LOADEDMODULES == *openmpi* ]]` is in thousands
 	// of them. _LMFILES_ is deliberately NOT set: it names modulefiles, and
 	// there are none here. Setting it to something invented would be a lie a
 	// script could act on.
 	fmt.Fprintf(stdout, "export LOADEDMODULES=%s\n", shellQuote(strings.Join(specs, ":")))
-	fmt.Fprintf(stdout, "export ZPKGE_BASE=%s\n", shellQuote(st.encode()))
+	fmt.Fprintf(stdout, "export ZPKE_BASE=%s\n", shellQuote(st.encode()))
 	return nil
 }
 

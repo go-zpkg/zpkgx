@@ -1,48 +1,48 @@
-# zpkgx
+# zpkx
 
-[![pkg.go.dev](https://img.shields.io/badge/pkg.go.dev-zpkgx-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/go-zpkg/zpkgx)
+[![pkg.go.dev](https://img.shields.io/badge/pkg.go.dev-zpkx-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/go-zpkg/zpkx)
 ![Go](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)
 
-The **zpkgx runtime** in pure Go — one static binary that runs any zpkgx
+The **zpkx runtime** in pure Go — one static binary that runs any zpkx
 package on the fly, and works on a literally-empty `FROM scratch` image.
 
-`zpkgx` is the *runtime* half of the pure-Go zpkg family; its sibling
+`zpkx` is the *runtime* half of the pure-Go zpkg family; its sibling
 [zpkgm](https://github.com/go-zpkg/zpkgm) is the *installer*. Both share one
 backend — artifact resolution, download, `FROM scratch` closure completion, and
 loader-aware exec — via the [`github.com/go-zpkg/artifact`](https://github.com/go-zpkg/artifact)
 package, so there is a single source of truth and no duplication.
 
-## ⛔ Two commands: `zpkgx` runs, `zpkgs` asks
+## ⛔ Two commands: `zpkx` runs, `zpks` asks
 
 This repository builds **two** binaries, and the split is about grammar
 rather than taste.
 
 The grammar has no verbs: the first argument that is not a flag is a
-**package**, and `zpkgx` runs it. Nine verbs had been added to that
+**package**, and `zpkx` runs it. Nine verbs had been added to that
 position — `ls`, `search`, `why`, `store`, `browse`, `catalog`, `env`,
 `compat`, `completion` — and each one took a name away from the registry. Two
 took names that exist: measured against the published linux/x86-64 catalogue
-on 2026-10-18, **`gnu.org/coreutils` provides both `ls` and `env`**. So `zpkgx
+on 2026-10-18, **`gnu.org/coreutils` provides both `ls` and `env`**. So `zpkx
 ls` listed a catalogue instead of running GNU ls, and there was no way to ask
 for the other one.
 
 ```console
-$ zpkgx ls --version          # GNU coreutils: the first word is a package
+$ zpkx ls --version          # GNU coreutils: the first word is a package
 ls (GNU coreutils) 9.11
-$ zpkgs ls gnu.org            # what is available under a node
-$ zpkgx -Q ls                 # which project provides the command `ls`
+$ zpks ls gnu.org            # what is available under a node
+$ zpkx -Q ls                 # which project provides the command `ls`
 gnu.org/coreutils
 ```
 
 **A reserved word could not fix it.** The obvious repair is one word to hang
-the verbs off — `zpkgx pkg ls`. It fails the same way: `vercel.com/pkg`
+the verbs off — `zpkx pkg ls`. It fails the same way: `vercel.com/pkg`
 provides the command `pkg`, and any bare word can become a package tomorrow,
 because the whole point of the first position is that the registry decides
 what is in it. Only a token the grammar already reserves is safe: a flag
 (`-Q`) or a different binary.
 
-`zpkgs` reads as a subject followed by a verb — `zpkgs search json`, `zpkgs why
+`zpks` reads as a subject followed by a verb — `zpks search json`, `zpks why
 curl.se openssl.org`. Nothing in either published catalogue provides a
 command by that name, while `pkgctl` is a real binary in Arch's devtools and
 `pkgtool` one in Slackware.
@@ -51,25 +51,25 @@ Both are built from `internal/app`: they share the resolver, the catalogue
 reader and the store walker, because a fork of the resolver is a fork of what
 a version *means*.
 
-### ⛔ If you had `zpkge` in your profile, re-run its init
+### ⛔ If you had `zpke` in your profile, re-run its init
 
 ```sh
-eval "$(zpkgs env init)"
+eval "$(zpks env init)"
 ```
 
-The generated `zpkge` function calls `zpkgx env load`, and `env` is the one
+The generated `zpke` function calls `zpkx env load`, and `env` is the one
 moved verb that a package also provides — `gnu.org/coreutils`. So an old
 profile does not get a pointer, it gets GNU env:
 
 ```console
-$ zpkgx env load foo
+$ zpkx env load foo
 env: ‘load’: No such file or directory      # exit 127
 ```
 
-That is zpkgx obeying the grammar, and it names neither binary. `zpkgx env`
-followed by a `zpkge` subcommand therefore prints a transition note and
+That is zpkx obeying the grammar, and it names neither binary. `zpkx env`
+followed by a `zpke` subcommand therefore prints a transition note and
 refuses, instead of running coreutils — one word wide, and only for those
-seven words, so `zpkgx env FOO=1 printenv` still does what it always did.
+seven words, so `zpkx env FOO=1 printenv` still does what it always did.
 
 Like zpkgm it is `CGO_ENABLED=0` with no runtime dependencies of its own: no
 Deno, no curl, no shell — a single ~9 MB binary that materialises each package's
@@ -80,19 +80,19 @@ full dependency closure on demand and execs it.
 **Linux / macOS** — one line, naming the release you want:
 
 ```sh
-curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx v0.32.0
+curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkx v0.32.0
 ```
 
 **Windows** (PowerShell) — `irm | iex` passes no arguments, so the version goes
 in the environment:
 
 ```powershell
-$env:ZPKG_TOOL='zpkgx'; $env:ZPKG_VERSION='v0.32.0'; irm https://go-zpkg.github.io/install.ps1 | iex
+$env:ZPKG_TOOL='zpkx'; $env:ZPKG_VERSION='v0.32.0'; irm https://go-zpkg.github.io/install.ps1 | iex
 ```
 
 The installer downloads the static binary for your os/arch from that
-[release](https://github.com/go-zpkg/zpkgx/releases), verifies it against the
-release `SHA256SUMS`, and drops `zpkgx` on your `PATH` (`$HOME/.local/bin`, or
+[release](https://github.com/go-zpkg/zpkx/releases), verifies it against the
+release `SHA256SUMS`, and drops `zpkx` on your `PATH` (`$HOME/.local/bin`, or
 `%LOCALAPPDATA%\Programs\go-zpkg` on Windows; `ZPKG_INSTALL` overrides the
 directory on Unix).
 
@@ -103,7 +103,7 @@ GitHub's **provenance attestation** — signed through Sigstore, saying that
 this repository's release workflow built that file from that commit:
 
 ```sh
-gh attestation verify -R go-zpkg/zpkgx zpkgx-linux-amd64
+gh attestation verify -R go-zpkg/zpkx zpkx-linux-amd64
 ```
 
 Every file of a release from **v0.23.2** onward carries one; releases before
@@ -114,83 +114,83 @@ than failing closed, so a 404 on an older binary means *unattested*, not
 The version is named on purpose: this line copied today and the same line
 copied in six months install the same bytes, and a bad release does not reach
 everyone who happens to install that hour. To track releases instead, say so —
-`sh -s -- zpkgx latest`, or `ZPKG_VERSION=latest`. Re-running is the updater; it
+`sh -s -- zpkx latest`, or `ZPKG_VERSION=latest`. Re-running is the updater; it
 skips the download when the target version is already installed.
 
 ⛔ **v0.32.0 is pinned here because it is the newest release that carries
 binaries.** v0.33.0 through v0.39.0 are release pages with no files on them —
-their publish step never ran ([#154](https://github.com/go-zpkg/zpkgx/issues/154),
-cause fixed in [#153](https://github.com/go-zpkg/zpkgx/pull/153)). `latest`
+their publish step never ran ([#154](https://github.com/go-zpkg/zpkx/issues/154),
+cause fixed in [#153](https://github.com/go-zpkg/zpkx/pull/153)). `latest`
 resolves to one of those today, which is why the version is named.
 
 **Go users**:
 
 ```sh
-go install github.com/go-zpkg/zpkgx@latest
+go install github.com/go-zpkg/zpkx@latest
 ```
 
 ## Usage
 
 ```
-zpkgx <pkg>[@version] [arg...]      run a package's program ephemerally
-                                    e.g. zpkgx node@22 --version
-zpkgx +<pkg> [+<pkg>...] [cmd ...]  bring packages into the environment and run
+zpkx <pkg>[@version] [arg...]      run a package's program ephemerally
+                                    e.g. zpkx node@22 --version
+zpkx +<pkg> [+<pkg>...] [cmd ...]  bring packages into the environment and run
                                     cmd with them on PATH + LD_LIBRARY_PATH
-                                    e.g. zpkgx +git +gnu.org/bash -- ./build.sh
-zpkgx --json +<pkg>...              the composed environment as data
-zpkgx --modulefile +<pkg>...        the same, as an Lmod modulefile
-zpkgx --lock <file> [cmd ...]       exactly the versions a zbk lock pins
-zpkgx --graph [--platform os/arch] +<pkg>...
+                                    e.g. zpkx +git +gnu.org/bash -- ./build.sh
+zpkx --json +<pkg>...              the composed environment as data
+zpkx --modulefile +<pkg>...        the same, as an Lmod modulefile
+zpkx --lock <file> [cmd ...]       exactly the versions a zbk lock pins
+zpkx --graph [--platform os/arch] +<pkg>...
                                     the resolved graph, for any platform
-zpkgx -Q [command]                  what can be run, and from which project
-zpkgx -h,--help   zpkgx -v,--version
+zpkx -Q [command]                  what can be run, and from which project
+zpkx -h,--help   zpkx -v,--version
 
-zpkgs ls [--tree] [node]            what is available under a node
-zpkgs ls --dependents <pkg>         who NEEDS this
-zpkgs why <project> <dependency>    the shortest path between them
-zpkgs search [-n N] <text>          by name, or by a command it provides
-zpkgs browse [node]                 walk the tree full-screen
-zpkgs catalog [update|reindex]      the catalogue; update takes --platform
-zpkgs store [--by-size] [--root …]  what this disk holds, and what it is for
-zpkgs compat +<pin>... -- <pkg>...  how much of a set resolves under a base
-zpkgs env init [--module]           the zpkge shell function (and module/ml)
-zpkgs env load|unload|purge         what that function evaluates
-zpkgs env avail | show <env>        the declared environments
-zpkgs env import <modulefile>...    convert Lmod/Environment Modules files
-zpkgs completion bash|zsh|fish      <TAB> completion, for BOTH commands
-zpkgs -h,--help   zpkgs -v,--version
+zpks ls [--tree] [node]            what is available under a node
+zpks ls --dependents <pkg>         who NEEDS this
+zpks why <project> <dependency>    the shortest path between them
+zpks search [-n N] <text>          by name, or by a command it provides
+zpks browse [node]                 walk the tree full-screen
+zpks catalog [update|reindex]      the catalogue; update takes --platform
+zpks store [--by-size] [--root …]  what this disk holds, and what it is for
+zpks compat +<pin>... -- <pkg>...  how much of a set resolves under a base
+zpks env init [--module]           the zpke shell function (and module/ml)
+zpks env load|unload|purge         what that function evaluates
+zpks env avail | show <env>        the declared environments
+zpks env import <modulefile>...    convert Lmod/Environment Modules files
+zpks completion bash|zsh|fish      <TAB> completion, for BOTH commands
+zpks -h,--help   zpks -v,--version
 ```
 
 ```console
-# on a FROM scratch image whose only file is the zpkgx binary:
-$ zpkgx node@22 --version
+# on a FROM scratch image whose only file is the zpkx binary:
+$ zpkx node@22 --version
 v22.x.x
-$ zpkgx +git +gnu.org/bash -- sh -c 'git --version'
+$ zpkx +git +gnu.org/bash -- sh -c 'git --version'
 git version 2.x.x
 ```
 
 ## Browsing the tree, and <TAB>
 
 ```console
-$ zpkgs catalog update
+$ zpks catalog update
 1907 project(s) → /home/you/.zpkg/catalog/linux-x86-64.json
 
-$ zpkgs ls
-zpkgx: catalogue /home/you/.zpkg/catalog/linux-x86-64.json, 2 hour(s) old
+$ zpks ls
+zpkx: catalogue /home/you/.zpkg/catalog/linux-x86-64.json, 2 hour(s) old
 curl.se                                  8.17.0, 1 under
 github.com                               41 under
 gnu.org                                  30 under
 zlib.net                                 1.3.2
 
-$ zpkgs ls gnu.org
+$ zpks ls gnu.org
 gnu.org/bash                             5.3  ✓
 gnu.org/gcc                              16.2.0, 1 under
 …
 
-$ zpkgs ls doxygen.nl
+$ zpks ls doxygen.nl
 doxygen.nl — no artifact here
 
-$ zpkgs ls curl.se
+$ zpks ls curl.se
 curl.se — 8.17.0
   curl.se/ca-certs
   nghttp2.org
@@ -213,7 +213,7 @@ A node can be **both**, and `curl.se` is: the listing shows its
 dependencies and then says where the namespace half is.
 
 ```console
-$ zpkgs ls --tree curl.se
+$ zpks ls --tree curl.se
 curl.se — 8.17.0
   curl.se/ca-certs
   nghttp2.org
@@ -228,7 +228,7 @@ long, and the first level is what a person reads. A diamond is named once
 and expanded once — and the one expanded is the **direct** dependency,
 because that is the one a reader came for.
 
-**This is read from the catalogue, so it needs no network.** `zpkgx --graph`
+**This is read from the catalogue, so it needs no network.** `zpkx --graph`
 answers the same question by resolving against the registry, which is the
 better answer when you have one and no answer at all in a scratch image
 that has not fetched anything yet.
@@ -243,13 +243,13 @@ It is not cosmetic. A recipe asking for `go.dev ^1.27.1` resolves here and
 does not resolve on linux at all, and nothing said so:
 
 ```console
-$ zpkgx --graph +go.dev@^1.27.1
+$ zpkx --graph +go.dev@^1.27.1
 go.dev 1.27.1
 └─ openssl.org 3.6.4
    └─ curl.se/ca-certs 2026.09.25
 
-$ zpkgx --graph --platform linux/x86-64 +go.dev@^1.27.1
-zpkgx: no version of go.dev satisfies "^1.27.1" AND is published for
+$ zpkx --graph --platform linux/x86-64 +go.dev@^1.27.1
+zpkx: no version of go.dev satisfies "^1.27.1" AND is published for
 linux/x86-64 (available: 1.27.1 1.26.8 1.26.5 … (11 in all);
 satisfy but not published here: 1.27.1); asked for by ^1.27.1 (requested)
 ```
@@ -275,8 +275,8 @@ exit 0, which is how this was found — and nearly how go-zpkg/packages#323 was
 read as unblocked when it is not. It now refuses:
 
 ```console
-$ ZPKG_CATALOG=/nope/absent.json zpkgx --graph +go.dev
-zpkgx: ZPKG_CATALOG names /nope/absent.json, and --graph does not read a
+$ ZPKG_CATALOG=/nope/absent.json zpkx --graph +go.dev
+zpkx: ZPKG_CATALOG names /nope/absent.json, and --graph does not read a
 catalogue — it resolves against the registry. To ask about another platform:
 --graph --platform os/arch
 ```
@@ -294,7 +294,7 @@ Everything above descends, which answers *what does this need* — the question
 before **installing**. `--dependents` asks the one before **changing**:
 
 ```console
-$ zpkgs ls --dependents openssl.org
+$ zpks ls --dependents openssl.org
 openssl.org — 4.0.2  ✓ 3.6.0
   agwa.name/git-crypt  (no artifact here)
   apache.org/arrow  25.0.1
@@ -315,11 +315,11 @@ A catalogue records what a platform really carries, so a project with no artifac
 there has no edges there. That is why the platform is printed under the list
 rather than left to be quoted bare.
 
-`zpkgs why` is the third question — not *what is in the closure* but **which
+`zpks why` is the third question — not *what is in the closure* but **which
 link put it there**:
 
 ```console
-$ zpkgs why git-scm.org zlib.net
+$ zpks why git-scm.org zlib.net
 git-scm.org — 2.55.0  ✓ 2.47.1
   → zlib.net — 1.3.2  ✓
 ```
@@ -347,7 +347,7 @@ install can hold more than this tree does.
 ### Everything is named; what is here is marked
 
 ```console
-$ zpkgs ls --tree curl.se
+$ zpks ls --tree curl.se
 curl.se — 8.17.0
   curl.se/ca-certs  2026.09.25
   doxygen.nl  (no artifact here)
@@ -374,7 +374,7 @@ about the catalogue dressed up as a statement about the registry.
 ### And what you already have
 
 ```console
-$ zpkgs ls --tree curl.se
+$ zpks ls --tree curl.se
 curl.se — 8.17.0  ✓
   curl.se/ca-certs  2026.09.25  ✓
   doxygen.nl  (no artifact here)
@@ -384,7 +384,7 @@ curl.se — 8.17.0  ✓
 
 A catalogue says what **exists**; a reader standing in front of it mostly
 wants to know what they **have**. nix and guix show the state of the store
-in everything they print; here nothing did, and `zpkgs ls curl.se` printed
+in everything they print; here nothing did, and `zpks ls curl.se` printed
 the same page before and after installing it.
 
 A bare `✓` when what is installed is the version on offer, and
@@ -395,10 +395,10 @@ and a second one reads as a second copy in the store.
 
 ### And what that has cost you
 
-A `✓` is per project. `zpkgs store` is the whole disk:
+A `✓` is per project. `zpks store` is the whole disk:
 
 ```console
-$ zpkgs store --by-size -n 6
+$ zpks store --by-size -n 6
 ~/.zpkg
 llvm.org                                   13.8 GiB  3 versions, 8.5 GiB not the newest here
 android.com/cmdline-tools                   6.4 GiB
@@ -426,7 +426,7 @@ here, so there is no root set: a version that looks superseded may be
 exactly what a lock pins. Hence the wording of the last line.
 
 It walks the tree, so it costs **seconds** rather than milliseconds — eight
-over 41 GiB. That is why it is its own command and not a line in `zpkgx
+over 41 GiB. That is why it is its own command and not a line in `zpkx
 catalog`: nothing on the `<TAB>` path may cost that.
 
 Sizes are powers of 1024 and say so with the `i`. `du` counts blocks and
@@ -438,7 +438,7 @@ the least a report can do about it.
 A size is not a decision. `--root` says what a lock needs:
 
 ```console
-$ zpkgs store --root seed.lock.hcl
+$ zpks store --root seed.lock.hcl
 …
 41.2 GiB over 363 version(s) of 302 project(s)
 
@@ -453,7 +453,7 @@ reporting before `gc` removes.
 
 [gc]: https://guix.gnu.org/manual/html_node/Invoking-guix-gc.html
 
-**A lock is already a root set.** `zpkgx --lock` pins every project in the
+**A lock is already a root set.** `zpkx --lock` pins every project in the
 closure, not only what you typed, so membership in it *is* reachability — no
 graph walk and no network. An **environment** would not do: it names
 constraints, which have to be resolved against the registry, and this works
@@ -474,7 +474,7 @@ seconds over 41 GiB is too long to wait to be told the arguments were wrong.
 ## Walking the tree
 
 ```console
-$ zpkgs browse
+$ zpks browse
 gnu.org — 54
 
 > gnu.org/bash                             5.3  ✓
@@ -485,7 +485,7 @@ gnu.org — 54
 · / search · space pin for the exit line · q quit, printing what is pinned
 ```
 
-`zpkgs ls` answers one question per command, which is right for a script and
+`zpks ls` answers one question per command, which is right for a script and
 wrong for a person who does not yet know what they are looking for: reaching
 `curl.se/ca-certs` from `curl.se` costs two commands and knowing that the
 trailing slash exists. [`nix-tree`](https://github.com/utdemir/nix-tree) is
@@ -503,31 +503,31 @@ the other way. The header says which way you are facing, and descending from a
 dependents list keeps walking *up*: who needs the thing that needs it.
 
 `q` prints what you pinned on **stdout** while the screen goes to stderr, so
-`zpkgx +$(zpkgs browse)` composes instead of putting borders on a command line.
+`zpkx +$(zpks browse)` composes instead of putting borders on a command line.
 
 **It reads the cached catalogue and nothing else** — no network, no
 resolution, no store walk per keystroke. And **without a terminal it prints
-the tree and exits**: `zpkgs browse | less`, a CI log and a scratch image are
+the tree and exits**: `zpks browse | less`, a CI log and a scratch image are
 the same case, and a command that refuses to work when its output is a pipe
 is one people stop putting in scripts.
 
 ## When it is not here at all
 
 ```console
-$ zpkgs request opendev.org/openstack/python-openstackclient
+$ zpks request opendev.org/openstack/python-openstackclient
 project   opendev.org/openstack/python-openstackclient
 platform  darwin/aarch64
-zpkgs      0.24.0
+zpks      0.24.0
 state     never published in this registry, for any platform
 
-Nothing was sent. `zpkgs request --url …` prints a link that opens this as an issue.
+Nothing was sent. `zpks request --url …` prints a link that opens this as an issue.
 ```
 
 The line that prompted it, from a user on 2026-10-22:
 
 ```console
-$ zpkgx openstack user list --domain stratuslab
-zpkgx: opendev.org/openstack/python-openstackclient is not published in
+$ zpkx openstack user list --domain stratuslab
+zpkx: opendev.org/openstack/python-openstackclient is not published in
       ghcr.io/go-pkgx/packages/… : response status code 403: denied
 ```
 
@@ -543,14 +543,14 @@ That third answer is also how you check a rollout, because it says **which
 version** and **where else**:
 
 ```console
-$ zpkgs request opendev.org/openstack/python-openstackclient
+$ zpks request opendev.org/openstack/python-openstackclient
 project   opendev.org/openstack/python-openstackclient
 platform  darwin/aarch64
-zpkgs      0.27.0
+zpks      0.27.0
 state     published for darwin/aarch64 at 10.5.0
           also linux/aarch64 linux/x86-64
 
-zpkgs: nothing to request: opendev.org/openstack/python-openstackclient 10.5.0 is published for darwin/aarch64
+zpks: nothing to request: opendev.org/openstack/python-openstackclient 10.5.0 is published for darwin/aarch64
 ```
 
 ⛔ It used to say only `published for this platform` — true, and silent
@@ -590,9 +590,9 @@ who met the 403 did not, so the failure itself says where to go — and only
 that failure:
 
 ```console
-$ zpkgx openstack user list --domain stratuslab
-zpkgx: opendev.org/openstack/python-openstackclient is not published in …
-zpkgx: if it should be here: `zpkgs request opendev.org/openstack/python-openstackclient`
+$ zpkx openstack user list --domain stratuslab
+zpkx: opendev.org/openstack/python-openstackclient is not published in …
+zpkx: if it should be here: `zpks request opendev.org/openstack/python-openstackclient`
       prints a report you can open as an issue (it sends nothing)
 ```
 
@@ -601,7 +601,7 @@ zpkgx: if it should be here: `zpkgs request opendev.org/openstack/python-opensta
 first live run fired on
 
 ```console
-zpkgx: command not found in the requested packages: true
+zpkx: command not found in the requested packages: true
 ```
 
 where the package was published and the **command** was missing. A hint that
@@ -617,13 +617,13 @@ with no artifact for *your* platform: measured against the published
 which `v0.25.0` shipped a hint that could not fire:
 
 ```console
-$ zpkgx +aerc-mail.org -- echo ok
-zpkgx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0.22.0; not published here: 0.22.0)
+$ zpkx +aerc-mail.org -- echo ok
+zpkx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0.22.0; not published here: 0.22.0)
 ```
 
 Both states are types now, and `artifact.ProjectToRequest` answers both in one
 call — two predicates at this call site is exactly how the second came to be
-forgotten. `zpkgs ls` can name the 567 for a platform
+forgotten. `zpks ls` can name the 567 for a platform
 (`go run ./internal/catstat -missing <catalogue.json>`), which is how that
 example was chosen: from a list the catalogue derived, not from one already
 believed in.
@@ -631,7 +631,7 @@ believed in.
 A build that failed, a signature that did not verify and a registry having a
 bad day get no hint — none of them is something to ask a maintainer to
 publish. A bare registry 404 gets none either: it *is* an absence, but it
-names no project, and `zpkgs request <project>` is not an instruction. The cost
+names no project, and `zpks request <project>` is not an instruction. The cost
 of that choice is a missed hint, never a wrong one.
 
 ### What keeps failing here
@@ -641,19 +641,19 @@ you that the same package has failed eleven times this month, which is the
 thing worth acting on.
 
 ```console
-$ zpkgs journal
+$ zpks journal
 2 failure(s) recorded here, 1 of them a package this registry does not have
 
 most asked for and not here:
      1  aerc-mail.org
 
-`zpkgs request <project>` turns one of those into a report you can open as
+`zpks request <project>` turns one of those into a report you can open as
 an issue. It sends nothing, and neither does this.
 ```
 
 ⛔ **It is a local file, and that is the whole design.** The useful signal
 from a package manager is which packages people reach for and do not get, and
-the usual way to collect it is to phone home. This does not. `zpkgs request`
+the usual way to collect it is to phone home. This does not. `zpks request`
 already promises, in its own help, that it *sends nothing*; the journal keeps
 that promise and adds the only thing `request` cannot — memory. Nothing here
 opens a socket, `ZPKG_JOURNAL=0` records nothing at all, and `--clear`
@@ -664,7 +664,7 @@ worse than no diary:
 
 | | |
 |---|---|
-| it cannot fail the command it records | a store that cannot be written is a reason for the journal to stay empty, not for `zpkgx node` to fail |
+| it cannot fail the command it records | a store that cannot be written is a reason for the journal to stay empty, not for `zpkx node` to fail |
 | it cannot grow without bound | a failing command in a loop would otherwise fill the disk — one rotation, capped at 2×256 KiB |
 | it cannot carry what it cannot print | the text is an error string quoting names read out of a catalogue, a registry index or a downloaded binary, so it is sanitised on the way **in** |
 
@@ -676,7 +676,7 @@ writer now closes a partial line before adding to it.
 ## You know the command, not the package
 
 ```console
-$ zpkgs search rg
+$ zpks search rg
 crates.io/ripgrep                        rg  14.1.1
 aardvark.io/rgbds                        rgbasm  0.9.0
 ```
@@ -699,7 +699,7 @@ neither, and by the time anyone compared, both numbers had changed and
 nothing said whether the difference was drift or a defect.
 
 ⛔ **And the search says so, even when it finds plenty.** Measured
-2026-10-20, `zpkgs search json` returns **thirteen** projects and none of
+2026-10-20, `zpks search json` returns **thirteen** projects and none of
 them is `stedolan.github.io/jq` — jq is in that catalogue, with the command
 `jq` and an artifact for this platform, and the word "json" is in neither its
 path nor its commands. Thirteen answers read as a *complete* answer, so a
@@ -709,14 +709,14 @@ over a catalogue where fewer than one project in five carries a description
 ends with one line on **stderr**:
 
 ```console
-$ zpkgs search json
+$ zpks search json
 github.com/zaach/jsonlint                jsonlint  1.6.0
 …
-zpkgs: only 6 of 1938 projects here carry a description, so a word that is in
+zpks: only 6 of 1938 projects here carry a description, so a word that is in
 neither a project's name nor a command it provides cannot reach it
 ```
 
-On stderr, so `zpkgs search x > list` still writes results and nothing else;
+On stderr, so `zpks search x > list` still writes results and nothing else;
 and only below that floor, so a catalogue that one day carries descriptions
 goes quiet instead of nagging.
 
@@ -730,16 +730,16 @@ recipe and the catalogue: the prose was never written.
 ### And the command runs, not just searches
 
 ```console
-$ zpkgx rg --version
+$ zpkx rg --version
 ripgrep 15.2.0
 
-$ zpkgx jq --version
+$ zpkx jq --version
 jq-1.8.2
 ```
 
 `rg` resolved to `crates.io/ripgrep` and `jq` to `stedolan.github.io/jq`,
 from an empty store, offline but for the artifacts. A constraint rides along —
-`zpkgx node@22 --version` is `nodejs.org` at 22 — and `+rg` works the same
+`zpkx node@22 --version` is `nodejs.org` at 22 — and `+rg` works the same
 way, because the two syntaxes are one request.
 
 A bare word is a **command**; a project is always a domain or a
@@ -749,9 +749,9 @@ stops being true is noticed.
 
 This was reported from the field, and it is why the paragraph above is not
 the whole story: the mapping lived in the catalogue and only `search` read
-it, so `zpkgx hugo version` answered *"no recipe for hugo in …pantry…"* —
+it, so `zpkx hugo version` answered *"no recipe for hugo in …pantry…"* —
 which reads as "go-zpkg does not know hugo" rather than "look under
-`provides`". Every `zpkgx <tool>` habit, Taskfile and doc had to be
+`provides`". Every `zpkx <tool>` habit, Taskfile and doc had to be
 rewritten with project names to work at all.
 
 Three things it will not do:
@@ -763,7 +763,7 @@ Three things it will not do:
   catalogue says `run: pkgs catalog update`, because a bare word can never
   be a project and a message about a missing *recipe* would be about the
   wrong thing.
-- **Read the catalogue for a project name.** `zpkgx +deps` runs inside every
+- **Read the catalogue for a project name.** `zpkx +deps` runs inside every
   factory build, in a loop; parsing 467 KB to notice that `gnu.org/bash`
   contains a slash would be paid on every call for nothing.
 
@@ -778,7 +778,7 @@ characters is not a search, it is a sieve: `search rg` used to return 625
 projects, 550 of them because `rg` sits inside `.org` — the result anybody
 wanted was still first, and 550 lines of noise stood behind it.
 
-Nothing found exits **non-zero**, so `zpkgs search x || echo none` works. And
+Nothing found exits **non-zero**, so `zpks search x || echo none` works. And
 a catalogue that carries no command names says so rather than letting "no
 such package" stand for "this catalogue cannot answer that kind of
 question".
@@ -786,14 +786,14 @@ question".
 ### Completion asks the binary
 
 ```sh
-eval "$(zpkgs completion bash)"     # or zsh, or: pkgs completion fish | source
+eval "$(zpks completion bash)"     # or zsh, or: pkgs completion fish | source
 ```
 
 ```console
-$ zpkgx +gnu.org/ba<TAB>
+$ zpkx +gnu.org/ba<TAB>
 +gnu.org/bash
 
-$ zpkgx gnu.o<TAB>
+$ zpkx gnu.o<TAB>
 gnu.org/                                 # with the slash, so the next TAB descends
 ```
 
@@ -839,12 +839,12 @@ in one pull, per platform because what is available differs by architecture.
 ### `--platform`, for a question about a machine you do not have
 
 ```console
-$ zpkgs catalog update --platform linux/x86-64
+$ zpks catalog update --platform linux/x86-64
 1915 project(s) → …/catalog/linux-x86-64.json
 ```
 
 It writes to **that platform's** path, so a foreign catalogue cannot be
-mistaken for the host's: `zpkgs ls` reads `catalog/<host>.json` and will not
+mistaken for the host's: `zpks ls` reads `catalog/<host>.json` and will not
 see it.
 
 `fetchCatalogFor` always took an os and an arch; only this command pinned
@@ -867,7 +867,7 @@ $ zbk vulnfetch -dir pantry -catalog catalog/linux-x86-64.json
 ### And which platforms are there at all?
 
 ```console
-$ zpkgs catalog platforms
+$ zpks catalog platforms
 darwin/aarch64
 darwin/x86-64
 linux/aarch64
@@ -894,11 +894,11 @@ manifest, and an index in which nothing names a platform are each an error
 with a reason on stderr.
 
 Like `update`, it asks the registry: no local file knows what *exists*, and
-this is the only other command in `zpkgs` that cannot work offline.
+this is the only other command in `zpks` that cannot work offline.
 
 ### One command fetches it; nothing else does
 
-`zpkgs catalog update` is **the only** thing on the read path that asks the
+`zpks catalog update` is **the only** thing on the read path that asks the
 registry what exists — `catalog platforms` above asks it too, and is the
 one other command that does, which is why both live under this verb. `ls`,
 `search`, `why`, `browse` and `<TAB>` read the file `update` wrote, and
@@ -946,7 +946,7 @@ sweeping):
 | **the name index** (38 KB), read + scan | **0.08 ms** |
 
 So the **decode** was all of it, and streaming only the two fields completion
-needs is merely twice as fast — not enough to matter. `zpkgs catalog update`
+needs is merely twice as fast — not enough to matter. `zpks catalog update`
 therefore also writes `catalog/<os>-<arch>.names`: one line per project, the
 name and the newest version, which is everything `<TAB>` shows. `ls`,
 `--tree`, `search` and `browse` keep reading the catalogue — they need
@@ -959,7 +959,7 @@ project count, both checked on read and both free; and a failed check is not an
 error — it falls back to the catalogue, which is the authority. The index can
 only make completion faster or make it do exactly what it did before.
 
-`zpkgs catalog reindex` rebuilds it from the catalogue already on disk, with no
+`zpks catalog reindex` rebuilds it from the catalogue already on disk, with no
 network — for an image that **ships** a catalogue, which had no way to get an
 index and so took the slow path in the one environment that can least afford
 it.
@@ -971,7 +971,7 @@ read 25.25 ms at load 89 and 3.78 ms at load 18:
 
 | arm | min | median | above the floor |
 | --- | --- | --- | --- |
-| the floor: `zpkgx --version`, no catalogue read | 2.71 ms | 3.05 ms | — |
+| the floor: `zpkx --version`, no catalogue read | 2.71 ms | 3.05 ms | — |
 | **completion, name index** | 3.07 ms | **3.78 ms** | **+0.73 ms** |
 | completion, decoding the catalogue | 5.97 ms | 6.50 ms | +3.45 ms |
 
@@ -1007,7 +1007,7 @@ browser's no-TTY degradation and a tab completion in it with
 
 ⛔ **Its planted positive is the point.** "Answered offline" and "I forgot
 to cut the network" are the same sentence, and `--network none` is one word
-away from being absent — so `zpkgs catalog update`, the one command that
+away from being absent — so `zpks catalog update`, the one command that
 must reach the registry, runs in the same configuration and has to **fail,
 about the network**:
 
@@ -1032,18 +1032,18 @@ asserted is that the answers arrive with no network to get them from. The
 numbers above remain the measurement.
 
 The price is that the index goes stale and nothing tells you by magic, so
-every command that reads it says how old it is, and `zpkgs catalog` says it
+every command that reads it says how old it is, and `zpks catalog` says it
 on its own:
 
 ```console
-$ zpkgs catalog
+$ zpks catalog
 /home/you/.zpkg/catalog/linux-x86-64.json
 1907 project(s), 905 with dependencies, 2 hour(s) old
 ```
 
-On a machine that has never fetched one, that command and `zpkgs ls` both
+On a machine that has never fetched one, that command and `zpks ls` both
 name the one that fixes it. A catalogue that is **there and will not parse**
-gets a different sentence, naming the file: "run `zpkgs catalog update`" is
+gets a different sentence, naming the file: "run `zpks catalog update`" is
 no help at all for that, and sending somebody to a command that cannot work
 is worse than saying nothing.
 
@@ -1052,7 +1052,7 @@ air-gapped image that ships one beside the store, or one being inspected
 before it is published. Set and unreadable is a **refusal**, not a quiet
 fall back to the local store: somebody who names a file means that file.
 
-When there is no catalogue at all, `zpkgs ls` falls back to **what is
+When there is no catalogue at all, `zpks ls` falls back to **what is
 installed** and says so in its header. That is not a lesser answer offline
 or in a fresh scratch image: it is the only true one available, and the two
 are never merged, because "available" about a mix of a registry and a local
@@ -1061,12 +1061,12 @@ store is a word with no meaning.
 ## An abandoned release line is not what you get by default
 
 ```console
-$ zpkgx --graph --platform linux/x86-64 +openssl.org@^3
+$ zpkx --graph --platform linux/x86-64 +openssl.org@^3
 openssl.org 3.5.8
 └─ curl.se/ca-certs 2026.10.20
 
-$ zpkgx --graph --platform linux/x86-64 +openssl.org@~3.6
-zpkgx: openssl.org 3.6.4 is on end-of-life release line 3.6 and nothing
+$ zpkx --graph --platform linux/x86-64 +openssl.org@~3.6
+zpkx: openssl.org 3.6.4 is on end-of-life release line 3.6 and nothing
       supported satisfies "~3.6"; using it
 openssl.org 3.6.4
 ```
@@ -1113,8 +1113,8 @@ mistake behind behaviour that looks like it worked.
 ## Running exactly what a lock pins
 
 ```console
-$ zpkgx --lock seed.lock.hcl -- make
-zpkgx: seed.lock.hcl, 231 pin(s), 3 hour(s) old
+$ zpkx --lock seed.lock.hcl -- make
+zpkx: seed.lock.hcl, 231 pin(s), 3 hour(s) old
 ```
 
 `zbk lock` wrote locks and nothing acted on one. A lock nobody consumes is a
@@ -1148,7 +1148,7 @@ for a shell you live in. A lock names *versions*. Two paths, side by side.
 ### And an environment can have one beside it
 
 ```console
-$ zpkgs env show cfd
+$ zpks env show cfd
 env "cfd"
   description  the solver stack, as validated on 2026-09-01
   declared in  /site/environments/site.hcl2
@@ -1168,7 +1168,7 @@ to attach to anything.
 
 So: `<name>.lock.hcl` beside the file that declared it, named for the
 **environment** because one `.hcl2` can declare several. When it is there,
-`zpkge load cfd` uses its pins — *every* pin, including the ones the
+`zpke load cfd` uses its pins — *every* pin, including the ones the
 manifest never named, which is the difference between a lock and a
 restatement of the manifest.
 
@@ -1189,16 +1189,16 @@ is not.
 ## Environments, and HPC
 
 A module system does two things: it resolves what a package needs, and it edits
-your shell. `zpkgx +a +b` already did the first. `zpkge` does the second.
+your shell. `zpkx +a +b` already did the first. `zpke` does the second.
 
 ```console
-$ eval "$(zpkgs env init)"          # in a profile
-$ zpkge load gnu.org/sed jq
-$ zpkge list
+$ eval "$(zpks env init)"          # in a profile
+$ zpke load gnu.org/sed jq
+$ zpke list
 gnu.org/sed
 stedolan.github.io/jq
-$ zpkge unload jq                   # /usr/bin/jq is back, exactly as it was
-$ zpkge save mine ; zpkge purge ; zpkge restore mine
+$ zpke unload jq                   # /usr/bin/jq is back, exactly as it was
+$ zpke save mine ; zpke purge ; zpke restore mine
 ```
 
 Loading never edits incrementally: it restores the environment it first saw and
@@ -1215,7 +1215,7 @@ env "cfd" {
 }
 ```
 
-`zpkge load cfd` — and `zpkgs env avail` / `zpkgs env show cfd` to see what a site
+`zpke load cfd` — and `zpks env avail` / `zpks env show cfd` to see what a site
 declares and from which file. An environment is not a lockfile: it names
 constraints, and the closure is resolved at load time from the signed registry,
 so a login node and a container agree.
@@ -1227,12 +1227,12 @@ Generate modulefiles and let the site's own Lmod load them. Nothing about
 Lmod is still the one doing the work.
 
 ```console
-$ zpkgx --modulefile +openmpi.org@5 > $MODULEPATH_DIR/openmpi/5.0.8.lua
+$ zpkx --modulefile +openmpi.org@5 > $MODULEPATH_DIR/openmpi/5.0.8.lua
 ```
 
 ### Without one
 
-`zpkgs env init --module` also defines `module` and `ml`, for a container, a
+`zpks env init --module` also defines `module` and `ml`, for a container, a
 laptop or a cluster built on this toolchain. It **refuses** to install itself
 where an Lmod already exists, and says to generate modulefiles instead: two
 implementations answering one command is how a support ticket becomes
@@ -1245,7 +1245,7 @@ could act on.
 ### Converting a site's modulefiles
 
 ```console
-$ zpkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5 \
+$ zpks env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5 \
     > $ZPKG_DIR/environments/site.hcl2
 ```
 
@@ -1256,7 +1256,7 @@ subtly wrong, found inside somebody's job. This refuses anything it would have
 to guess at, names the line, and writes nothing at all if any file was refused.
 
 ```console
-$ zpkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
+$ zpks env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
 /opt/modulefiles/openmpi.lua: 3 statement(s) this converter will not guess at:
   line 3: not a plain call: this converter reads statements, it does not run Lua
     local root = "/opt/openmpi/5.0.8"
@@ -1264,12 +1264,12 @@ $ zpkgs env import /opt/modulefiles/openmpi.lua /opt/modulefiles/hdf5
     prepend_path("PATH", pathJoin(root, "bin"))
   line 5: depends_on states a RELATIONSHIP between modules, not an environment change: decide it in the environment that replaces this one
     depends_on("hwloc")
-zpkgx: 1 of 2 modulefile(s) not converted — nothing written, because a PARTIAL conversion is the one outcome nobody can check
+zpkx: 1 of 2 modulefile(s) not converted — nothing written, because a PARTIAL conversion is the one outcome nobody can check
 ```
 
 ⛔ **The file it writes is a boundary, and since v0.28.0 two more things are
 refused there.** A modulefile is somebody else's file, and the HCL2 this
-generates is config `zpkgx env` later evaluates — so whatever a modulefile can
+generates is config `zpkx env` later evaluates — so whatever a modulefile can
 put into it, it can put into your environment.
 
 - **A name that is not an environment variable name.** `setenv` chooses the
@@ -1302,7 +1302,7 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
 
 - `ZPKG_DIR` — artifact store (default `~/.zpkg`)
 - `ZPKG_DIST` — artifact source. The default is our signed registry;
-  `zpkgx --help` prints the one this binary is built against, and it is held
+  `zpkx --help` prints the one this binary is built against, and it is held
   in exactly one place, `artifact.DistBase`, so it moves in one edit. Point this
   at a mirror of your own if you have one.
   ⛔ It no longer names a pkgx dist as an alternative: we are no
@@ -1325,7 +1325,7 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
   and a warning, not a fall back. See
   [above](#an-abandoned-release-line-is-not-what-you-get-by-default)
 
-By default `zpkgx <pkg>` fetches from the signed registry and verifies each
+By default `zpkx <pkg>` fetches from the signed registry and verifies each
 artifact's signature before running it — no env needed.
 
 ### Two builders, one artifact
@@ -1340,10 +1340,10 @@ and the client counts how many distinct trusted keys it can verify.
 # install nothing that a second builder did not independently reproduce
 export ZPKG_EXTRA_TRUSTED_KEYS='alice:RWQ…'
 export ZPKG_TRUST_THRESHOLD=2
-zpkgx +fftw.org
+zpkx +fftw.org
 ```
 
-`zpkgx builds <project>@<version>` shows a **SIGNED BY** column, naming the
+`zpkx builds <project>@<version>` shows a **SIGNED BY** column, naming the
 signers *as your own trust set names them* — never as the registry does, since
 a name on the artefact is written by whoever pushed it. A row marked `⚠` does
 not meet your threshold and will be refused at install time; a `?` means the
@@ -1356,7 +1356,7 @@ artifact in the registry; Nix and Spack take the same position). So *what made
 this* and *who vouches for it* are two questions, and the table answers both:
 
 ```
-$ zpkgs builds --platform linux/x86-64 lz4.org@1.10.0
+$ zpks builds --platform linux/x86-64 lz4.org@1.10.0
 HASH    INSTALLED  PUBLISHED  SIGNED BY  BUILT BY    WHAT
 (none)  -          yes        go-zpkg    bk@v0.26.0  nothing recorded
 ```
@@ -1436,17 +1436,17 @@ before the answer exists. Measured 2026-10-09 in a container whose only file
 was the pkgx binary:
 
 ```sh
-$ zpkgx stedolan.github.io/jq -n '1+1'
+$ zpkx stedolan.github.io/jq -n '1+1'
 …/jq: error while loading shared libraries: libm.so.6: cannot open shared
 object file: No such file or directory
 ```
 
 Every ELF, not one package: `+gnu.org/coreutils -- env` died the same way on
-`libc.so.6`, and `zpkgx --lock` could not run a lock at all. Supplying the same
+`libc.so.6`, and `zpkx --lock` could not run a lock at all. Supplying the same
 path from outside the container made the identical command print `2`, which is
 what located it.
 
-The quiet part: `zpkgx +jq` **printed** a complete environment the whole time,
+The quiet part: `zpkx +jq` **printed** a complete environment the whole time,
 because the print path already posed the loader first. Reading the two outputs
 side by side showed nothing wrong with either; only running the second one did.
 

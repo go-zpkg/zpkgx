@@ -61,14 +61,14 @@ jobs:
 
       # Cross-compile the pure-Go CGO_ENABLED=0 binary for every
       # {linux,darwin,windows} x {amd64,arm64} target, name the assets
-      # zpkgx-<os>-<arch> (windows: .exe), and record a SHA256SUMS manifest.
+      # zpkx-<os>-<arch> (windows: .exe), and record a SHA256SUMS manifest.
       # The release version (tag without the leading "v") is injected into
       # internal/app.version via -ldflags so `--version` matches the tag.
       # ⛔ dist/ MUST NOT LIVE IN THE CHECKOUT. Go stamps the main module
       # from the work tree's VCS state, so the moment the first binary lands
       # in an untracked dist/ the tree is dirty and every LATER build in this
       # loop is stamped `+dirty` with `vcs.modified=true`. Measured on the
-      # published v0.14.0 assets: `mod github.com/go-zpkg/zpkgx v0.14.0+dirty`.
+      # published v0.14.0 assets: `mod github.com/go-zpkg/zpkx v0.14.0+dirty`.
       #
       # An EMPTY directory is invisible to git, so `mkdir dist` alone is
       # harmless — it is the first `-o dist/...` that does it, which means
@@ -99,10 +99,10 @@ jobs:
             windows/amd64 windows/arm64; do
             os=${target%/*}
             arch=${target#*/}
-            for tool in zpkgx zpkgs; do
+            for tool in zpkx zpks; do
               pkg="."
-              if [ "$tool" = "zpkgs" ]; then
-                pkg="./cmd/zpkgs"
+              if [ "$tool" = "zpks" ]; then
+                pkg="./cmd/zpks"
               fi
               out="${tool}-${os}-${arch}"
               if [ "$os" = "windows" ]; then
@@ -111,12 +111,12 @@ jobs:
               echo "building $out"
               CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
                 go build -trimpath \
-                  -ldflags="-s -w -X github.com/go-zpkg/zpkgx/internal/app.version=${TAG#v}" \
+                  -ldflags="-s -w -X github.com/go-zpkg/zpkx/internal/app.version=${TAG#v}" \
                   -o "$DIST/${out}" "$pkg"
             done
           done
           cd "$DIST"
-          sha256sum zpkgx-* zpkgs-* > SHA256SUMS
+          sha256sum zpkx-* zpks-* > SHA256SUMS
           cat SHA256SUMS
 
       # EVERY binary, not one, and EQUALITY, not "contains the tag".
@@ -132,7 +132,7 @@ jobs:
           bad=0
           # Both binaries. A guard that walked only pkgx-* would have
           # checked half a release and said so with the same green tick.
-          for bin in "$DIST"/zpkgx-* "$DIST"/zpkgs-*; do
+          for bin in "$DIST"/zpkx-* "$DIST"/zpks-*; do
             name=$(basename "$bin")
             info=$(go version -m "$bin")
             mod=$(printf '%s\n' "$info" | awk '$1=="mod" {print $3; exit}')
@@ -161,13 +161,13 @@ jobs:
           # And the version it PRINTS: the ldflags stamp is what users see,
           # and it is set independently of the build info above.
           # ⛔ THE NAMES THE BUILD LOOP ACTUALLY WROTE. This said
-          # `for tool in pkgx pkgs` while the loop above built zpkgx-* and
-          # zpkgs-*, so it read a path that does not exist, `$(...)` produced
+          # `for tool in pkgx pkgs` while the loop above built zpkx-* and
+          # zpks-*, so it read a path that does not exist, `$(...)` produced
           # the empty string, and every release from v0.34.0 to v0.39.0 failed
           # here with "pkgx --version says '', want exactly '0.39.0'" —
           # taking the attestation and publish steps down with it. Six
           # releases exist as pages carrying NO binaries.
-          for tool in zpkgx zpkgs; do
+          for tool in zpkx zpks; do
             got=$("$DIST/${tool}-linux-amd64" --version | awk '{print $2}')
             if [ "$got" != "$want" ]; then
               echo "::error::$tool --version says '$got', want exactly '$want'"
@@ -182,7 +182,7 @@ jobs:
       # would replace the manifest. A provenance attestation is the half
       # that cannot be forged from the release page — GitHub signs, through
       # Sigstore, a statement that THIS workflow built THAT file from THAT
-      # commit, and `gh attestation verify -R go-zpkg/zpkgx <file>` checks it.
+      # commit, and `gh attestation verify -R go-zpkg/zpkx <file>` checks it.
       #
       # Measured 2026-10-20 on the v0.23.1 release, with go-fleettools'
       # relverify: twelve files, every checksum right, and every attestation
@@ -197,8 +197,8 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
-            ${{ runner.temp }}/dist/zpkgx-*
-            ${{ runner.temp }}/dist/zpkgs-*
+            ${{ runner.temp }}/dist/zpkx-*
+            ${{ runner.temp }}/dist/zpks-*
             ${{ runner.temp }}/dist/SHA256SUMS
 
       - name: Publish GitHub Release
@@ -210,11 +210,11 @@ jobs:
           DIST="$RUNNER_TEMP/dist"
           # ⛔⛔ THE TOOL NAMES IN --notes ARE THE INSTALLER'S ARGUMENT, and they
           # were the RETIRED ones. install.sh accepts exactly
-          # {zpkgm, zpkgx, zpkgs, mirror} and refuses anything else BY NAME
+          # {zpkgm, zpkx, zpks, mirror} and refuses anything else BY NAME
           # (go-zpkg.github.io static/install.sh:59-61 — "unknown tool 'pkgx'",
           # exit 1), so every release published notes whose install command
-          # fails, for both halves. The assets beside them have been `zpkgx-*`
-          # and `zpkgs-*` all along, which is why nothing else noticed: the
+          # fails, for both halves. The assets beside them have been `zpkx-*`
+          # and `zpks-*` all along, which is why nothing else noticed: the
           # download worked, only the sentence telling people how to get it did
           # not.
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -222,5 +222,5 @@ jobs:
           else
             gh release create "$TAG" "$DIST"/* \
               --title "$TAG" \
-              --notes "Static, dependency-free binaries (CGO_ENABLED=0) for linux, darwin and windows on amd64 and arm64. TWO commands: zpkgx runs packages, zpkgs answers about them (ls, search, why, catalog, store, browse, compat, env, completion). Verify downloads against SHA256SUMS. Install THIS release with: curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx $TAG — and the same line with zpkgs."
+              --notes "Static, dependency-free binaries (CGO_ENABLED=0) for linux, darwin and windows on amd64 and arm64. TWO commands: zpkx runs packages, zpks answers about them (ls, search, why, catalog, store, browse, compat, env, completion). Verify downloads against SHA256SUMS. Install THIS release with: curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkx $TAG — and the same line with zpks."
           fi

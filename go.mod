@@ -1,4 +1,4 @@
-module github.com/go-zpkg/zpkgx
+module github.com/go-zpkg/zpkx
 
 go 1.27.4
 
