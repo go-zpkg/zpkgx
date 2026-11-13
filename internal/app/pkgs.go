@@ -36,7 +36,7 @@ import (
 //
 // It reads as a subject followed by a verb — `zpks search json`, `zpks why
 // curl.se openssl.org` — which is the grammar being restored, and it keeps
-// the family's shape beside zpkx, zpkgm and zpke. Checked before it was
+// the family's shape beside zpkx, zpkm and zpke. Checked before it was
 // chosen: nothing in either published catalogue provides a command called
 // `zpks`, while `pkgctl` is a real binary in Arch's devtools and `pkgtool`
 // one in Slackware — collisions outside the catalogue that the catalogue

@@ -9,7 +9,7 @@ import (
 // not, and — more importantly — the ones it must NOT swallow.
 //
 // The breakage this fixes: `zpkx --quiet deno^2.1 …` is the shebang of
-// upstream's own `zpkgm`, and with this binary as the `zpkx` on PATH it came
+// upstream's own `zpkm`, and with this binary as the `zpkx` on PATH it came
 // back as `no project declares the command "--quiet"`. The flag was being
 // looked up as a COMMAND NAME, so the failure pointed at the registry instead
 // of at the argument.

@@ -8,7 +8,7 @@ The **zpkx runtime** in pure Go — one static binary that runs any zpkx
 package on the fly, and works on a literally-empty `FROM scratch` image.
 
 `zpkx` is the *runtime* half of the pure-Go zpkg family; its sibling
-[zpkgm](https://github.com/go-zpkg/zpkgm) is the *installer*. Both share one
+[zpkm](https://github.com/go-zpkg/zpkm) is the *installer*. Both share one
 backend — artifact resolution, download, `FROM scratch` closure completion, and
 loader-aware exec — via the [`github.com/go-zpkg/artifact`](https://github.com/go-zpkg/artifact)
 package, so there is a single source of truth and no duplication.
@@ -71,7 +71,7 @@ followed by a `zpke` subcommand therefore prints a transition note and
 refuses, instead of running coreutils — one word wide, and only for those
 seven words, so `zpkx env FOO=1 printenv` still does what it always did.
 
-Like zpkgm it is `CGO_ENABLED=0` with no runtime dependencies of its own: no
+Like zpkm it is `CGO_ENABLED=0` with no runtime dependencies of its own: no
 Deno, no curl, no shell — a single ~9 MB binary that materialises each package's
 full dependency closure on demand and execs it.
 
@@ -413,7 +413,7 @@ gohugo.io                                1020.5 MiB  13 versions, 934.6 MiB not 
 ```
 
 Every ephemeral run leaves its artifacts behind and **nothing removes one**.
-`zpkgm list` answers a different question — what you asked to have installed
+`zpkm list` answers a different question — what you asked to have installed
 — so an artifact pulled six months ago to run one command is in neither. Those
 figures are this developer's machine on 2026-10-08, and **thirteen versions
 of gohugo.io** is not a number anybody chose.
