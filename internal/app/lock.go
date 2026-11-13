@@ -9,7 +9,7 @@ import (
 	"github.com/go-zpkg/artifact"
 )
 
-// `zpkgx --lock <file>` — run exactly what a lock pins.
+// `zpkx --lock <file>` — run exactly what a lock pins.
 //
 // # THE OTHER END OF `bk lock`
 //
@@ -51,7 +51,7 @@ func lockedSpecs(d artifact.Lock) []string {
 			continue
 		}
 		// `=` is the exact-version form the resolver already understands,
-		// the one a person writes as `zpkgx node@=22.1.0`.
+		// the one a person writes as `zpkx node@=22.1.0`.
 		out = append(out, p.Project+"@="+p.Version)
 	}
 	sort.Strings(out)
@@ -93,7 +93,7 @@ func loadLock(path string, stderr io.Writer) (artifact.Lock, error) {
 	// Said, because a lock's whole claim is that nothing moved, and a
 	// reader should be able to see WHICH file made that claim and how old
 	// it is without opening it.
-	fmt.Fprintf(stderr, "zpkgx: %s, %d pin(s), %s\n",
+	fmt.Fprintf(stderr, "zpkx: %s, %d pin(s), %s\n",
 		path, len(d.Pins), artifact.LockAge(d.Generated, timeNow()))
 	return d, nil
 }

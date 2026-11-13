@@ -16,7 +16,7 @@ import (
 // packages are org-scoped and did not follow the repository transfer, so
 // every artifact stayed where it was.
 //
-// Nothing could see the disagreement. `zpkgx -h` is a string, the resolver
+// Nothing could see the disagreement. `zpkx -h` is a string, the resolver
 // reads a var, and the two only meet in a reader who happens to compare them.
 // A person following the printed default would point ZPKG_DIST at an empty
 // registry and read the 403 as a permissions problem — the exact confusion
@@ -32,8 +32,8 @@ func TestEveryHelpTextNamesTheRealRegistryDefault(t *testing.T) {
 		t.Fatal("artifact.DistBase is empty: this test would then pass on any help text at all")
 	}
 	for _, tc := range []struct{ what, text string }{
-		{"zpkgx usage", usage},
-		{"zpkgs usage", zpkgsUsage},
+		{"zpkx usage", usage},
+		{"zpks usage", zpksUsage},
 	} {
 		if !strings.Contains(tc.text, "ZPKG_DIST") {
 			t.Errorf("%s does not document ZPKG_DIST at all", tc.what)
@@ -56,8 +56,8 @@ func TestNoHelpTextNamesTheEmptyRegistry(t *testing.T) {
 		t.Skip("DistBase now points there, so the artifacts were copied and this check is obsolete")
 	}
 	for _, tc := range []struct{ what, text string }{
-		{"zpkgx usage", usage},
-		{"zpkgs usage", zpkgsUsage},
+		{"zpkx usage", usage},
+		{"zpks usage", zpksUsage},
 	} {
 		if strings.Contains(tc.text, empty) {
 			t.Errorf("%s names %s, which holds no artifacts — probed ABSENT 2026-11-04 "+

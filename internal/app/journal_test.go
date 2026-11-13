@@ -14,7 +14,7 @@ import (
 
 // artifactNoArtifactErr is the real error artifact raises when a project exists
 // but has no artifact for this platform — the one `sayHowToAsk` turns into the
-// `zpkgs request` hint. Using artifact's own type rather than a lookalike is
+// `zpks request` hint. Using artifact's own type rather than a lookalike is
 // what keeps the journal's taxonomy tied to the hint's.
 func artifactNoArtifactErr(project string) error {
 	return &artifact.NoArtifactHereError{Project: project}
@@ -59,7 +59,7 @@ func TestJournalRecordsOtherFailuresWithoutAProject(t *testing.T) {
 }
 
 // ⛔ THE JOURNAL MUST NOT BREAK THE COMMAND IT RECORDS. A store that cannot
-// be written is a reason for the diary to stay empty, not for `zpkgx node` to
+// be written is a reason for the diary to stay empty, not for `zpkx node` to
 // fail, so recordFailure reports nothing and must not panic.
 func TestJournalSurvivesAnUnwritableStore(t *testing.T) {
 	dir := t.TempDir()
@@ -74,10 +74,10 @@ func TestJournalSurvivesAnUnwritableStore(t *testing.T) {
 
 // ⛔ IT MUST NOT CARRY WHAT IT CANNOT PRINT. The text is an error string, and
 // those quote names read out of a catalogue, a registry index or a
-// downloaded binary. What is written now is printed later by `zpkgs journal`.
+// downloaded binary. What is written now is printed later by `zpks journal`.
 func TestJournalStripsWhatWouldReachATerminal(t *testing.T) {
 	journalStore(t)
-	recordFailure(errors.New("harmless\x1b[2K\rzpkgx  SAFE\x00\x07 and\na newline"))
+	recordFailure(errors.New("harmless\x1b[2K\rzpkx  SAFE\x00\x07 and\na newline"))
 
 	got := readJournal(journalPath())
 	if len(got) != 1 {

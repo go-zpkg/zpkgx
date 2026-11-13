@@ -141,7 +141,7 @@ func TestAnUnreadableLockFails(t *testing.T) {
 }
 
 func TestLockIsInTheUsage(t *testing.T) {
-	if !strings.Contains(usage, "zpkgx --lock") {
+	if !strings.Contains(usage, "zpkx --lock") {
 		t.Error("usage does not mention --lock")
 	}
 }

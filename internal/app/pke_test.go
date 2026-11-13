@@ -18,7 +18,7 @@ func fakeEnv(m map[string]string) func(string) (string, bool) {
 func twoPkgs(specs []string) (composed, error) {
 	var c composed
 	for _, s := range specs {
-		c.Env = append(c.Env, envVar{Name: "PATH", Prepend: []string{"/zpkgx/" + s + "/bin"}})
+		c.Env = append(c.Env, envVar{Name: "PATH", Prepend: []string{"/zpkx/" + s + "/bin"}})
 	}
 	if len(specs) > 0 {
 		c.Env = append(c.Env, envVar{Name: "TOOLVAR", Value: "set-by-" + specs[len(specs)-1]})
@@ -27,38 +27,49 @@ func twoPkgs(specs []string) (composed, error) {
 }
 
 // A load captures the PRISTINE value of every variable it touches, and says so
-// in ZPKGE_BASE — that snapshot is the whole reason unload can be exact.
+// in ZPKE_BASE — that snapshot is the whole reason unload can be exact.
 // ⛔⛔ TestAProfileFromBeforeTheRenameIsRefusedNotIgnored.
 //
-// The zpkge function lives in the user's shell profile, so an old one goes on
-// exporting PKGE_SPECS/PKGE_BASE while this binary reads ZPKGE_*. Without
-// this check nothing errors: `zpkge list` prints nothing, `unload` unloads
+// The zpke function lives in the user's shell profile, so an old one goes on
+// exporting PKGE_SPECS/PKGE_BASE while this binary reads ZPKE_*. Without
+// this check nothing errors: `zpke list` prints nothing, `unload` unloads
 // nothing, `purge` restores nothing — and the packages stay on PATH, so the
 // shell looks right while the state is invisible. Silence is the worst answer
 // available.
 //
 // It is refused rather than read: reading the old name would be an alias for
 // a retired spelling, which is the thing being removed.
+// ⛔⛔ EVERY RETIRED GENERATION IS A CASE, and the newest one is the one a
+// rename forgets. `zpkge` → `zpke` made ZPKGE_* retired; a test that only
+// covered PKGE_* would have stayed green while every profile written up to
+// the day of the rename fell through to the silence this refuses.
 func TestAProfileFromBeforeTheRenameIsRefusedNotIgnored(t *testing.T) {
-	old := map[string]string{"PKGE_SPECS": "a b", "PKGE_BASE": "irrelevant"}
-	var out bytes.Buffer
-	err := modeShell("purge", nil, twoPkgs, fakeEnv(old), &out)
-	if err == nil {
-		t.Fatal("a pre-rename profile was acted on silently")
-	}
-	for _, want := range []string{"PKGE_SPECS", "ZPKGE_", `eval "$(zpkgs env init)"`} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the refusal does not mention %s: %v", want, err)
+	for _, c := range []struct{ prefix, why string }{
+		{"ZPKGE_", "the generation retired by zpkge -> zpke"},
+		{"PKGE_", "the generation retired by the pkgx break"},
+	} {
+		old := map[string]string{c.prefix + "SPECS": "a b", c.prefix + "BASE": "irrelevant"}
+		var out bytes.Buffer
+		err := modeShell("purge", nil, twoPkgs, fakeEnv(old), &out)
+		if err == nil {
+			t.Fatalf("%s: a pre-rename profile was acted on silently (%s)", c.prefix, c.why)
 		}
-	}
-	if out.Len() != 0 {
-		t.Errorf("it emitted shell despite refusing:\n%s", out.String())
+		// The refusal must name the spelling FOUND: telling a reader whose
+		// profile says ZPKGE_* to look for PKGE_* sends them after a variable
+		// they do not have.
+		for _, want := range []string{c.prefix + "SPECS", "ZPKE_", `eval "$(zpks env init)"`} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("%s: the refusal does not mention %s: %v", c.prefix, want, err)
+			}
+		}
+		if out.Len() != 0 {
+			t.Errorf("%s: it emitted shell despite refusing:\n%s", c.prefix, out.String())
+		}
 	}
 
 	// A CURRENT profile is not refused, or the fix would be unreachable.
-	out.Reset()
-	cur := map[string]string{"ZPKGE_SPECS": "a"}
-	if err := modeShell("purge", nil, twoPkgs, fakeEnv(cur), &out); err != nil {
+	var cur bytes.Buffer
+	if err := modeShell("purge", nil, twoPkgs, fakeEnv(map[string]string{"ZPKE_SPECS": "a"}), &cur); err != nil {
 		t.Errorf("a current profile was refused: %v", err)
 	}
 }
@@ -73,7 +84,7 @@ func TestLoadCapturesTheBaseOnce(t *testing.T) {
 	if !strings.Contains(got, `export PATH='/usr/bin'`) {
 		t.Errorf("the base must be restored before the new value:\n%s", got)
 	}
-	if !strings.Contains(got, "export ZPKGE_SPECS='a'") {
+	if !strings.Contains(got, "export ZPKE_SPECS='a'") {
 		t.Errorf("no spec set:\n%s", got)
 	}
 	// TOOLVAR did not exist: restoring it later must UNSET it, not set it empty.
@@ -81,8 +92,8 @@ func TestLoadCapturesTheBaseOnce(t *testing.T) {
 		t.Errorf("a variable that did not exist must be restored by unsetting:\n%s", got)
 	}
 	// A second load must NOT record the first load's output as the base.
-	base := betweenQuotes(t, got, "export ZPKGE_BASE=")
-	env2 := map[string]string{"PATH": "/zpkgx/a/bin:/usr/bin", "TOOLVAR": "set-by-a", "ZPKGE_SPECS": "a", "ZPKGE_BASE": base}
+	base := betweenQuotes(t, got, "export ZPKE_BASE=")
+	env2 := map[string]string{"PATH": "/zpkx/a/bin:/usr/bin", "TOOLVAR": "set-by-a", "ZPKE_SPECS": "a", "ZPKE_BASE": base}
 	var out2 strings.Builder
 	if err := modeShell("load", []string{"b"}, twoPkgs, fakeEnv(env2), &out2); err != nil {
 		t.Fatal(err)
@@ -90,7 +101,7 @@ func TestLoadCapturesTheBaseOnce(t *testing.T) {
 	if !strings.Contains(out2.String(), `export PATH='/usr/bin'`) {
 		t.Errorf("the second load recaptured a polluted base:\n%s", out2.String())
 	}
-	if !strings.Contains(out2.String(), "export ZPKGE_SPECS='a b'") {
+	if !strings.Contains(out2.String(), "export ZPKE_SPECS='a b'") {
 		t.Errorf("the second load lost the first spec:\n%s", out2.String())
 	}
 }
@@ -102,10 +113,10 @@ func TestUnloadIsExact(t *testing.T) {
 	if err := modeShell("load", []string{"a", "b", "c"}, twoPkgs, fakeEnv(map[string]string{"PATH": "/usr/bin"}), &loaded); err != nil {
 		t.Fatal(err)
 	}
-	base := betweenQuotes(t, loaded.String(), "export ZPKGE_BASE=")
+	base := betweenQuotes(t, loaded.String(), "export ZPKE_BASE=")
 	env := map[string]string{
-		"PATH": "/zpkgx/a/bin:/zpkgx/b/bin:/zpkgx/c/bin:/usr/bin", "TOOLVAR": "set-by-c",
-		"ZPKGE_SPECS": "a b c", "ZPKGE_BASE": base,
+		"PATH": "/zpkx/a/bin:/zpkx/b/bin:/zpkx/c/bin:/usr/bin", "TOOLVAR": "set-by-c",
+		"ZPKE_SPECS": "a b c", "ZPKE_BASE": base,
 	}
 	var afterUnload strings.Builder
 	if err := modeShell("unload", []string{"b"}, twoPkgs, fakeEnv(env), &afterUnload); err != nil {
@@ -127,13 +138,13 @@ func TestPurgeRestoresAndForgets(t *testing.T) {
 	if err := modeShell("load", []string{"a"}, twoPkgs, fakeEnv(map[string]string{"PATH": "/usr/bin"}), &loaded); err != nil {
 		t.Fatal(err)
 	}
-	base := betweenQuotes(t, loaded.String(), "export ZPKGE_BASE=")
+	base := betweenQuotes(t, loaded.String(), "export ZPKE_BASE=")
 	var out strings.Builder
-	if err := modeShell("purge", nil, twoPkgs, fakeEnv(map[string]string{"ZPKGE_SPECS": "a", "ZPKGE_BASE": base}), &out); err != nil {
+	if err := modeShell("purge", nil, twoPkgs, fakeEnv(map[string]string{"ZPKE_SPECS": "a", "ZPKE_BASE": base}), &out); err != nil {
 		t.Fatal(err)
 	}
 	got := out.String()
-	for _, want := range []string{`export PATH='/usr/bin'`, "unset TOOLVAR", "unset ZPKGE_SPECS", "unset ZPKGE_BASE"} {
+	for _, want := range []string{`export PATH='/usr/bin'`, "unset TOOLVAR", "unset ZPKE_SPECS", "unset ZPKE_BASE"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("purge is missing %q:\n%s", want, got)
 		}
@@ -153,27 +164,27 @@ func TestLoadSwapsTheSameProject(t *testing.T) {
 // `unload x` must work whether x was loaded bare or with a constraint —
 // otherwise nobody can unload what they loaded.
 func TestUnloadByProjectName(t *testing.T) {
-	env := map[string]string{"ZPKGE_SPECS": "nodejs.org@22 gnu.org/bash"}
+	env := map[string]string{"ZPKE_SPECS": "nodejs.org@22 gnu.org/bash"}
 	var out strings.Builder
 	if err := modeShell("unload", []string{"nodejs.org"}, twoPkgs, fakeEnv(env), &out); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "export ZPKGE_SPECS='gnu.org/bash'") {
+	if !strings.Contains(out.String(), "export ZPKE_SPECS='gnu.org/bash'") {
 		t.Errorf("unload by project name did not drop the constrained spec:\n%s", out.String())
 	}
 }
 
 // A value containing a quote, a space or a newline must survive the round trip:
-// ZPKGE_BASE is base64 for exactly this reason, and every emission is quoted.
+// ZPKE_BASE is base64 for exactly this reason, and every emission is quoted.
 func TestAwkwardValuesSurvive(t *testing.T) {
 	nasty := "a b'c\nd$e"
 	var out strings.Builder
 	if err := modeShell("load", []string{"a"}, twoPkgs, fakeEnv(map[string]string{"PATH": nasty}), &out); err != nil {
 		t.Fatal(err)
 	}
-	base := betweenQuotes(t, out.String(), "export ZPKGE_BASE=")
+	base := betweenQuotes(t, out.String(), "export ZPKE_BASE=")
 	st := loadModState(func(n string) string {
-		if n == "ZPKGE_BASE" {
+		if n == "ZPKE_BASE" {
 			return base
 		}
 		return ""
@@ -190,10 +201,10 @@ func TestAwkwardValuesSurvive(t *testing.T) {
 }
 
 // Unreadable state is treated as no state: a shell with a corrupted
-// ZPKGE_BASE must still be usable, not permanently broken.
+// ZPKE_BASE must still be usable, not permanently broken.
 func TestCorruptBaseIsIgnored(t *testing.T) {
 	st := loadModState(func(n string) string {
-		if n == "ZPKGE_BASE" {
+		if n == "ZPKE_BASE" {
 			return "not base64 !!"
 		}
 		return ""
@@ -215,7 +226,7 @@ func TestShellInitIsValidShell(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := filepath.Join(t.TempDir(), "init.sh")
-	if err := os.WriteFile(f, []byte(out.String()+"\nzpkge help 2>/dev/null\n"), 0o644); err != nil {
+	if err := os.WriteFile(f, []byte(out.String()+"\nzpke help 2>/dev/null\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := osexec.Command(sh, "-n", f).CombinedOutput(); err != nil {

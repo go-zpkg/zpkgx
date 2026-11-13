@@ -21,7 +21,7 @@ import (
 // because the lock belongs to the environment.
 //
 // Nix and Guix solve the same problem from the other end — `flake.lock`
-// pins the nixzpkgs INPUT, `channels.scm` pins "all of Guix" — so neither
+// pins the nixzpks INPUT, `channels.scm` pins "all of Guix" — so neither
 // has a resolved-version lock to attach to anything. Three systems, two
 // answers, and only one of them is about versions.
 //
@@ -135,7 +135,7 @@ func lockedSpecsFor(d artifact.Lock) []string {
 	return out
 }
 
-// describeEnvLock is the line `zpkgx env show` prints about the pairing.
+// describeEnvLock is the line `zpkx env show` prints about the pairing.
 func describeEnvLock(e environment, w io.Writer) {
 	p := envLockPath(e)
 	if p == "" {

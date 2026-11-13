@@ -59,7 +59,7 @@ func TestCatalogPathComesFromTheBinary(t *testing.T) {
 	// called catalog. The completion being measured is still pkgx's.
 	bin := filepath.Join(dir, "pkgx")
 	stager := filepath.Join(dir, "pkgs")
-	for _, b := range []struct{ out, pkg string }{{bin, "."}, {stager, "./cmd/zpkgs"}} {
+	for _, b := range []struct{ out, pkg string }{{bin, "."}, {stager, "./cmd/zpks"}} {
 		build := exec.Command("go", "build", "-o", b.out, b.pkg)
 		build.Dir = root
 		build.Stderr = os.Stderr

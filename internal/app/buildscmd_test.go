@@ -528,7 +528,7 @@ func TestASpecNamingABuildIsRefusedRatherThanIgnored(t *testing.T) {
 	if err == nil {
 		t.Fatal("a build-by-hash spec resolved as if the hash were not there")
 	}
-	for _, want := range []string{"7k2mq4", "zpkgs builds", "fftw.org@3.3.11"} {
+	for _, want := range []string{"7k2mq4", "zpks builds", "fftw.org@3.3.11"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal does not contain %q: %v", want, err)
 		}
