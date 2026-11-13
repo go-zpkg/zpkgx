@@ -1393,6 +1393,21 @@ ZPKG_VERIFY = true                               # fail-closed signature check
 # OCI_TOKEN   = "..."                            # private-registry credentials
 ```
 
+⛔ **Two of those defaults are dependencies being wound down, and the file
+does not say so on its own.** `ZPKG_DIST` points at `ghcr.io/go-pkgx/packages`
+because GitHub's container packages are **org-scoped and did not follow the
+repository transfer** — every repository moved and every bottle stayed, so
+that registry is the live one and spelling the new name here would point at an
+empty namespace (it shipped that way once, in v0.64.0 through v0.68.0).
+`ZPKG_PANTRY` defaults to `pkgxdev/pantry` because the resolver still reads it
+with our own recipes merged over the top (`bottle/zpkg.go:68`).
+
+Both end the same way and in this order: recipes **written** from each
+project's own build files — not converted, because that corpus carries no
+licence to convert (go-zpkg/packages#431) — then **built** into
+`ghcr.io/go-zpkg/packages` by the sovereign factory (go-zpkg/packages#440).
+`zbk lint --require-standalone` counts how far that has got.
+
 Values may be strings, booleans, or numbers. A missing file is ignored; a
 malformed one is reported once on stderr and otherwise ignored (the tools fall
 back to environment variables and built-in defaults).
