@@ -210,7 +210,7 @@ jobs:
           DIST="$RUNNER_TEMP/dist"
           # ⛔⛔ THE TOOL NAMES IN --notes ARE THE INSTALLER'S ARGUMENT, and they
           # were the RETIRED ones. install.sh accepts exactly
-          # {zpkgm, zpkx, zpks, mirror} and refuses anything else BY NAME
+          # {zpkm, zpkx, zpks, mirror} and refuses anything else BY NAME
           # (go-zpkg.github.io static/install.sh:59-61 — "unknown tool 'pkgx'",
           # exit 1), so every release published notes whose install command
           # fails, for both halves. The assets beside them have been `zpkx-*`

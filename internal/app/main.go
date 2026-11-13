@@ -7,7 +7,7 @@
 // (https://dist.pkgx.dev) with ZPKG_VERIFY=0 for the full pantry.
 //
 // It shares its whole artifact backend — resolution, download, FROM-scratch
-// closure completion, and loader-aware exec — with zpkgm via the
+// closure completion, and loader-aware exec — with zpkm via the
 // github.com/go-zpkg/artifact package, so there is one source of truth.
 package app
 
@@ -79,7 +79,7 @@ usage:
                                      implementation prints no progress, so
                                      there is none to suppress. They are taken
                                      because real scripts pass them — the
-                                     shebang of upstream's own zpkgm does — and
+                                     shebang of upstream's own zpkm does — and
                                      such a script must not break on the day
                                      this binary is the zpkx on PATH
   zpkx -h, --help                    show this help
@@ -259,12 +259,12 @@ func run(argv []string) int {
 
 	// ⛔ UPSTREAM'S VERBOSITY FLAGS, BEFORE argv[0] IS READ AS A PACKAGE.
 	// Without this, `zpkx --quiet deno^2.1 …` — which is the SHEBANG of
-	// upstream's own `zpkgm` — came back as
+	// upstream's own `zpkm` — came back as
 	//
 	//	zpkx: no project declares the command "--quiet" — try: zpks search --quiet
 	//
 	// so it did not merely fail, it misdiagnosed: the flag was looked up as a
-	// command name. Reported 2026-10-31 by someone whose `sudo zpkgm install`
+	// command name. Reported 2026-10-31 by someone whose `sudo zpkm install`
 	// broke because the `zpkx` on PATH was this one. See stripVerbosity.
 	argv = stripVerbosity(argv)
 	if len(argv) == 0 {
@@ -424,7 +424,7 @@ const (
 //
 // The alternative is worse than a documented no-op. Upstream zpkx has
 // `--quiet`, `--silent`, `-q`, `-s`, and real scripts in the wild pass them —
-// including the shebang of upstream's own `zpkgm`, which is how this was found.
+// including the shebang of upstream's own `zpkm`, which is how this was found.
 // Refusing them means any such script breaks the moment this binary is the
 // `zpkx` on PATH, and it breaks with a message about a missing *command*.
 // Compatibility with a flag we have nothing to do about costs one branch; the
@@ -988,7 +988,7 @@ func resolveBin(runProject, program string, binDirs []string, closure []artifact
 
 // runELF execs the target binary. On linux it arranges the pkgx glibc loader so
 // the binary (and any children) resolve on a scratch image — the same mechanism
-// zpkgm's `run` uses. On darwin and windows there is no such loader dance: the
+// zpkm's `run` uses. On darwin and windows there is no such loader dance: the
 // binary is exec'd directly (Windows resolves its DLLs from the exe dir + PATH,
 // which runEnv has already populated).
 func runELF(binPath string, args, env []string, libPath, dir string) error {

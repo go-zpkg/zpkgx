@@ -16,7 +16,7 @@ import (
 // # WHY
 //
 // Every ephemeral `zpkx <pkg>` leaves its artifacts in
-// $ZPKG_DIR/<project>/v<version>, and nothing ever removes one. `zpkgm list`
+// $ZPKG_DIR/<project>/v<version>, and nothing ever removes one. `zpkm list`
 // answers a different question — what did I ask to have installed — and a
 // artifact pulled to run one command six months ago is in neither.
 //
