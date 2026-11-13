@@ -25,7 +25,7 @@ func cfdLock() artifact.Lock {
 	osn, arch := artifact.HostSlug()
 	return artifact.Lock{
 		Version: artifact.LockfileVersion, Platform: osn + "/" + arch,
-		Generated: "2026-10-06T09:00:00Z", ZBK: "v0.14.1",
+		Generated: "2026-10-06T09:00:00Z", ZPKB: "v0.14.1",
 		Roots: []string{"openmpi.org", "hdf5.org"},
 		Pins: []artifact.LockPin{
 			{Project: "hdf5.org", Version: "1.14.6", Spec: "sha256:b"},
