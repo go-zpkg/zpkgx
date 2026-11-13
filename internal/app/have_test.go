@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // nix and guix show the state of the store in everything they print. Here
@@ -67,17 +67,17 @@ func TestTheTickNamesTheVersionOnlyWhenItDiffers(t *testing.T) {
 	}
 }
 
-// A project with no bottle for this platform can still be installed — built
+// A project with no artifact for this platform can still be installed — built
 // by hand, or carried over from another machine — and that is exactly the
 // reader who needs to be told, because the catalogue's own answer is "no".
-func TestSomethingInstalledWithNoBottleHereStillShows(t *testing.T) {
+func TestSomethingInstalledWithNoArtifactHereStillShows(t *testing.T) {
 	withCatalog(t, sweptCatalog(), nil)
 	withInstalled(t, map[string][]string{"doxygen.nl": {"1.14.0"}})
 	var out bytes.Buffer
 	if code := runLs([]string{"doxygen.nl"}, &out, &bytes.Buffer{}); code != 0 {
 		t.Fatalf("code=%d", code)
 	}
-	if !strings.Contains(out.String(), "no bottle here  ✓ 1.14.0") {
+	if !strings.Contains(out.String(), "no artifact here  ✓ 1.14.0") {
 		t.Errorf("out=%q", out.String())
 	}
 }
@@ -85,9 +85,9 @@ func TestSomethingInstalledWithNoBottleHereStillShows(t *testing.T) {
 // A repeat in the tree is a pointer at a node already printed. Marking it
 // again reads as a second copy in the store.
 func TestARepeatIsNotMarkedTwice(t *testing.T) {
-	withCatalog(t, bottle.Catalog{
+	withCatalog(t, artifact.Catalog{
 		Generated: "2026-10-06T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "curl.se", Versions: []string{"8.17.0"}, Deps: []string{"openssl.org", "zlib.net"}},
 			{Project: "openssl.org", Versions: []string{"3.6.0"}, Deps: []string{"zlib.net"}},
 			{Project: "zlib.net", Versions: []string{"1.3.2"}},

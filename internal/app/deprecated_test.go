@@ -3,15 +3,15 @@ package app
 import (
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // ⛔⛔ THE RANKING IS STILL ON, now that nothing here switches it on.
 //
 // This is the one assertion worth keeping in zpkgx. The list, and the tests
 // that guard its CONTENT — both halves recorded, no supported line marked
-// dead, lines rather than releases, a date that parses — moved to bottle with
-// the data (go-zpkg/bottle#186), because that is where the data is and two
+// dead, lines rather than releases, a date that parses — moved to artifact with
+// the data (go-zpkg/artifact#186), because that is where the data is and two
 // copies are two answers waiting to disagree.
 //
 // What zpkgx still has to answer is narrower and specific to this binary: when
@@ -21,10 +21,10 @@ import (
 // test passed while no answer changed. A test that sets the list measures the
 // mechanism; this one measures the state a user's resolution actually sees.
 func TestTheRankingIsInForceWithoutAnyActivationHere(t *testing.T) {
-	if len(bottle.DefaultDeprecated) == 0 {
-		t.Fatal("bottle.DefaultDeprecated is empty, so the EOL ranking is inert again")
+	if len(artifact.DefaultDeprecated) == 0 {
+		t.Fatal("artifact.DefaultDeprecated is empty, so the EOL ranking is inert again")
 	}
-	if got := bottle.DefaultDeprecated["openssl.org"]; len(got) == 0 {
+	if got := artifact.DefaultDeprecated["openssl.org"]; len(got) == 0 {
 		t.Error("no openssl.org lines are deprecated, which is what this is for")
 	}
 }

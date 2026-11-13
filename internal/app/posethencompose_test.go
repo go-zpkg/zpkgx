@@ -6,28 +6,28 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // glibcFixture lays out a closure holding glibc's VERSIONED sub-libdir, which
 // is where libc.so.6 actually is and the whole reason that directory has to
 // reach LD_LIBRARY_PATH.
 //
-// It does NOT try to create a loader file. bottle.LoaderName() is empty on the
+// It does NOT try to create a loader file. artifact.LoaderName() is empty on the
 // architectures with no canonical ld-linux name — riscv64, ppc64le and loong64
 // among them — so a fixture built from it creates nothing there, and the first
 // version of this test asserted on a step that never ran. The qemu lanes
 // failed with `both steps did not run: [ask]`. The loader lookup is a seam
 // instead, so these tests measure the ORDER on every architecture rather than
 // on the two where a loader happens to be nameable.
-func glibcFixture(t *testing.T) (dir string, versioned string, closure []bottle.Resolved) {
+func glibcFixture(t *testing.T) (dir string, versioned string, closure []artifact.Resolved) {
 	t.Helper()
 	dir = t.TempDir()
-	versioned = filepath.Join(dir, bottle.GlibcProject, "v2.44.0", "lib", "glibc-2.44")
+	versioned = filepath.Join(dir, artifact.GlibcProject, "v2.44.0", "lib", "glibc-2.44")
 	if err := os.MkdirAll(versioned, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return dir, versioned, []bottle.Resolved{{Project: bottle.GlibcProject, Version: bottle.ParseVer("2.44.0")}}
+	return dir, versioned, []artifact.Resolved{{Project: artifact.GlibcProject, Version: artifact.ParseVer("2.44.0")}}
 }
 
 // poseSeams makes the platform check and the loader lookup both answer yes, so
@@ -62,7 +62,7 @@ func TestTheLoaderIsPosedBeforeTheEnvironmentIsComposed(t *testing.T) {
 		return true
 	}
 
-	poseThenCompose(closure, dir, bottle.LibPath(closure, dir))
+	poseThenCompose(closure, dir, artifact.LibPath(closure, dir))
 
 	if len(order) < 2 {
 		t.Fatalf("both steps did not run: %v", order)
@@ -85,7 +85,7 @@ func TestTheComposedEnvironmentCarriesTheDirectoryLibcIsIn(t *testing.T) {
 	setupRootfs = func(string, string) { posed = true }
 	loaderIsOurs = func(string) bool { return posed }
 
-	env := poseThenCompose(closure, dir, bottle.LibPath(closure, dir))
+	env := poseThenCompose(closure, dir, artifact.LibPath(closure, dir))
 
 	var ld string
 	for _, e := range env {
@@ -130,7 +130,7 @@ func TestTheComposedEnvironmentPutsThatDirectoryOnLibraryPathToo(t *testing.T) {
 	setupRootfs = func(string, string) { posed = true }
 	loaderIsOurs = func(string) bool { return posed }
 
-	env := poseThenCompose(closure, dir, bottle.LibPath(closure, dir))
+	env := poseThenCompose(closure, dir, artifact.LibPath(closure, dir))
 
 	var lib string
 	for _, e := range env {
@@ -160,7 +160,7 @@ func TestThatDirectoryStaysOffLibraryPathWhenTheLoaderIsNotOurs(t *testing.T) {
 	setupRootfs = func(string, string) {}
 	loaderIsOurs = func(string) bool { return false }
 
-	env := poseThenCompose(closure, dir, bottle.LibPath(closure, dir))
+	env := poseThenCompose(closure, dir, artifact.LibPath(closure, dir))
 
 	for _, e := range env {
 		if !strings.HasPrefix(e, "LIBRARY_PATH=") && !strings.HasPrefix(e, "LD_LIBRARY_PATH=") {
@@ -191,7 +191,7 @@ func TestNothingIsPosedWhereThereIsNoLoaderToPose(t *testing.T) {
 	posed := false
 	setupRootfs = func(string, string) { posed = true }
 
-	env := poseThenCompose(closure, dir, bottle.LibPath(closure, dir))
+	env := poseThenCompose(closure, dir, artifact.LibPath(closure, dir))
 
 	if posed {
 		t.Error("a loader was posed on a platform that has none")

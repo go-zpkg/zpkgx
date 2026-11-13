@@ -9,8 +9,8 @@ package on the fly, and works on a literally-empty `FROM scratch` image.
 
 `zpkgx` is the *runtime* half of the pure-Go zpkg family; its sibling
 [zpkgm](https://github.com/go-zpkg/zpkgm) is the *installer*. Both share one
-backend — bottle resolution, download, `FROM scratch` closure completion, and
-loader-aware exec — via the [`github.com/go-zpkg/bottle`](https://github.com/go-zpkg/bottle)
+backend — artifact resolution, download, `FROM scratch` closure completion, and
+loader-aware exec — via the [`github.com/go-zpkg/artifact`](https://github.com/go-zpkg/artifact)
 package, so there is a single source of truth and no duplication.
 
 ## ⛔ Two commands: `zpkgx` runs, `zpkgs` asks
@@ -188,7 +188,7 @@ gnu.org/gcc                              16.2.0, 1 under
 …
 
 $ zpkgs ls doxygen.nl
-doxygen.nl — no bottle here
+doxygen.nl — no artifact here
 
 $ zpkgs ls curl.se
 curl.se — 8.17.0
@@ -235,7 +235,7 @@ that has not fetched anything yet.
 
 ### ⛔ `--graph --platform`, because the answer is not the same everywhere
 
-`--graph` used to resolve for the host and only the host. `bottle.GraphFor`
+`--graph` used to resolve for the host and only the host. `artifact.GraphFor`
 always took an os and an arch; one line in `printGraph` pinned them — the
 same defect, in the same shape, that `catalog update` had before #106.
 
@@ -285,7 +285,7 @@ A refusal rather than a warning, because a warning on stderr is missed in
 exactly the place this matters — a script reading the tree. And a refusal
 rather than resolving *from* the catalogue, because the two answer different
 questions: a catalogue records what is **published**, while this resolves
-what **would satisfy** a constraint, including versions no bottle carries.
+what **would satisfy** a constraint, including versions no artifact carries.
 The error message above depends on being able to tell those apart.
 
 ### The other direction
@@ -296,7 +296,7 @@ before **installing**. `--dependents` asks the one before **changing**:
 ```console
 $ zpkgs ls --dependents openssl.org
 openssl.org — 4.0.2  ✓ 3.6.0
-  agwa.name/git-crypt  (no bottle here)
+  agwa.name/git-crypt  (no artifact here)
   apache.org/arrow  25.0.1
   …
 
@@ -311,7 +311,7 @@ catalogues published 2026-10-06, out of 1908 projects each:
 | darwin/aarch64 | 153 | 789 |
 | linux/aarch64 | 164 | 854 |
 
-A catalogue records what a platform really carries, so a project with no bottle
+A catalogue records what a platform really carries, so a project with no artifact
 there has no edges there. That is why the platform is printed under the list
 rather than left to be quoted bare.
 
@@ -341,7 +341,7 @@ nothing to do before anything is installed.
 [gr]: https://guix.gnu.org/manual/html_node/Invoking-guix-refresh.html
 
 What it shows is what recipes **declare**. It is not the installed closure:
-`bottle` also pulls providers by soname that no recipe names, so a real
+`artifact` also pulls providers by soname that no recipe names, so a real
 install can hold more than this tree does.
 
 ### Everything is named; what is here is marked
@@ -350,7 +350,7 @@ install can hold more than this tree does.
 $ zpkgs ls --tree curl.se
 curl.se — 8.17.0
   curl.se/ca-certs  2026.09.25
-  doxygen.nl  (no bottle here)
+  doxygen.nl  (no artifact here)
   openssl.org  3.6.0
 ```
 
@@ -359,7 +359,7 @@ differs by architecture — the s390x lane has a fraction of what
 linux/x86-64 has. The choice here is to name everything and mark the rest,
 rather than to hide it: dropping `doxygen.nl` would tell a reader it does
 not exist, which is false; printing it bare tells them nothing. Marking it
-tells them it exists, that there is no bottle for them, and therefore that
+tells them it exists, that there is no artifact for them, and therefore that
 building it is the thing to do next.
 
 In a **tree** that mark is usually the most useful line on the page: it
@@ -367,8 +367,8 @@ names the reason the thing above it cannot be installed, which would
 otherwise print as a bare name among satisfied ones.
 
 A catalogue built without the registry sweep (`zbk catalog` with no
-`--versions`) knows nothing about bottles, and says nothing about them —
-every line would otherwise read "no bottle here", which is a statement
+`--versions`) knows nothing about artifacts, and says nothing about them —
+every line would otherwise read "no artifact here", which is a statement
 about the catalogue dressed up as a statement about the registry.
 
 ### And what you already have
@@ -377,7 +377,7 @@ about the catalogue dressed up as a statement about the registry.
 $ zpkgs ls --tree curl.se
 curl.se — 8.17.0  ✓
   curl.se/ca-certs  2026.09.25  ✓
-  doxygen.nl  (no bottle here)
+  doxygen.nl  (no artifact here)
   openssl.org  3.6.0  ✓ 3.5.1
   zlib.net  1.3.2
 ```
@@ -412,9 +412,9 @@ gohugo.io                                1020.5 MiB  13 versions, 934.6 MiB not 
 12.8 GiB is in versions that are not the newest present — which is not the same as unused
 ```
 
-Every ephemeral run leaves its bottles behind and **nothing removes one**.
+Every ephemeral run leaves its artifacts behind and **nothing removes one**.
 `zpkgm list` answers a different question — what you asked to have installed
-— so a bottle pulled six months ago to run one command is in neither. Those
+— so an artifact pulled six months ago to run one command is in neither. Those
 figures are this developer's machine on 2026-10-08, and **thirteen versions
 of gohugo.io** is not a number anybody chose.
 
@@ -478,7 +478,7 @@ $ zpkgs browse
 gnu.org — 54
 
 > gnu.org/bash                             5.3  ✓
-  gnu.org/gcc                              no bottle here
+  gnu.org/gcc                              no artifact here
  +gnu.org/make                             4.4.1
 
 ↑ ↓ / k j move · → / l / enter descend · ← / h back · tab names ⇄ dependencies ⇄ dependents
@@ -574,10 +574,10 @@ It sends nothing. `--url` prints a link you read first; there is no flag that
 posts, and nothing to configure or forget.
 
 ⛔ Its first three live runs each found a defect in **itself**, and all three
-had one shape: a rule `bottle` already owned, tested, and did not export, so
+had one shape: a rule `artifact` already owned, tested, and did not export, so
 this caller wrote a worse one. It counted `sha256-…` attestation tags as
-versions (`IsVersionTag`, bottle v0.50.0); and it reprinted ghcr's raw 403
-instead of reporting an absence (`IsNotPublished`, bottle v0.51.0 — which
+versions (`IsVersionTag`, artifact v0.50.0); and it reprinted ghcr's raw 403
+instead of reporting an absence (`IsNotPublished`, artifact v0.51.0 — which
 also stopped that predicate panicking on `nil`, a trap only exporting
 creates). Chasing the first led to a third: `tagSpellings` offered `26.8.0`
 as a spelling of `26.8.1`, which is why the linux/x86-64 catalogue
@@ -597,7 +597,7 @@ zpkgx: if it should be here: `zpkgs request opendev.org/openstack/python-opensta
 ```
 
 ⛔ **It matches a type, not a sentence.** The first version asked
-`bottle.IsNotPublished`, whose last resort reads the error's *text*, and its
+`artifact.IsNotPublished`, whose last resort reads the error's *text*, and its
 first live run fired on
 
 ```console
@@ -610,9 +610,9 @@ is a type, and it carries the project: the line names what to ask for instead
 of printing a placeholder.
 
 ⛔ **And it asks one question, because the first version answered half of
-one.** `*bottle.NotPublishedError` means the registry has no such repository
+one.** `*artifact.NotPublishedError` means the registry has no such repository
 — a brand-new package, and the **rare** case. The ordinary one is a recipe
-with no bottle for *your* platform: measured against the published
+with no artifact for *your* platform: measured against the published
 `darwin/aarch64` catalogue on 2026-10-23, **567 of 1940 projects**, against
 which `v0.25.0` shipped a hint that could not fire:
 
@@ -621,7 +621,7 @@ $ zpkgx +aerc-mail.org -- echo ok
 zpkgx: no version of aerc-mail.org is published for darwin/aarch64 (available: 0.22.0; not published here: 0.22.0)
 ```
 
-Both states are types now, and `bottle.ProjectToRequest` answers both in one
+Both states are types now, and `artifact.ProjectToRequest` answers both in one
 call — two predicates at this call site is exactly how the second came to be
 forgotten. `zpkgs ls` can name the 567 for a platform
 (`go run ./internal/catstat -missing <catalogue.json>`), which is how that
@@ -701,7 +701,7 @@ nothing said whether the difference was drift or a defect.
 ⛔ **And the search says so, even when it finds plenty.** Measured
 2026-10-20, `zpkgs search json` returns **thirteen** projects and none of
 them is `stedolan.github.io/jq` — jq is in that catalogue, with the command
-`jq` and a bottle for this platform, and the word "json" is in neither its
+`jq` and an artifact for this platform, and the word "json" is in neither its
 path nor its commands. Thirteen answers read as a *complete* answer, so a
 reader concludes jq is not packaged. A search that finds nothing already
 makes a reader suspicious; one that finds plenty does not. So every search
@@ -738,7 +738,7 @@ jq-1.8.2
 ```
 
 `rg` resolved to `crates.io/ripgrep` and `jq` to `stedolan.github.io/jq`,
-from an empty store, offline but for the bottles. A constraint rides along —
+from an empty store, offline but for the artifacts. A constraint rides along —
 `zpkgx node@22 --version` is `nodejs.org` at 22 — and `+rg` works the same
 way, because the two syntaxes are one request.
 
@@ -770,7 +770,7 @@ Three things it will not do:
 So the match is on names and on commands, ranked by **how** a thing
 matched rather than by how often — a command named exactly what you typed
 is what you meant, every time. Each line says why it is there and what you
-would get, including `no bottle here` and `✓` where they apply. Offline,
+would get, including `no artifact here` and `✓` where they apply. Offline,
 from the same catalogue everything else reads.
 
 A query shorter than three characters matches **commands only**. Two
@@ -833,7 +833,7 @@ GET /v2/go-pkgx/packages/zlib.net/tags/list  200   ["1.3.2", …]
 ```
 
 Versions, yes; projects, no. So the registry carries a **catalogue**, which
-is an ordinary bottle — signed, attested and cached like any other, fetched
+is an ordinary artifact — signed, attested and cached like any other, fetched
 in one pull, per platform because what is available differs by architecture.
 
 ### `--platform`, for a question about a machine you do not have
@@ -849,7 +849,7 @@ see it.
 
 `fetchCatalogFor` always took an os and an arch; only this command pinned
 them to the host, and that one line made two measurements impossible from a
-darwin machine — whether a darwin/x86-64 bottle starts, and what
+darwin machine — whether a darwin/x86-64 artifact starts, and what
 `zbk vulnfetch -catalog` would report for linux before a CI job is wired to
 run it. Both had been written down twice as *"unmeasured, needs another
 machine"*, which is a note nobody acts on.
@@ -1135,7 +1135,7 @@ and a free one cannot drift apart.
 
 A lock taken on another platform is refused by name. The platform changes
 the answer: measured on our own published catalogues, **537 of 1908**
-projects available on `linux/x86-64` have no bottle for `darwin/aarch64`.
+projects available on `linux/x86-64` have no artifact for `darwin/aarch64`.
 
 `--lock` cannot be mixed with `+pkg`: a lock **is** the set, and adding to
 it would resolve one package freshly against pinned ones — a third thing
@@ -1300,25 +1300,25 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
 
 ## Environment
 
-- `ZPKG_DIR` — bottle store (default `~/.zpkg`)
-- `ZPKG_DIST` — bottle source. The default is our signed registry;
+- `ZPKG_DIR` — artifact store (default `~/.zpkg`)
+- `ZPKG_DIST` — artifact source. The default is our signed registry;
   `zpkgx --help` prints the one this binary is built against, and it is held
-  in exactly one place, `bottle.DistBase`, so it moves in one edit. Point this
+  in exactly one place, `artifact.DistBase`, so it moves in one edit. Point this
   at a mirror of your own if you have one.
   ⛔ It no longer names a pkgx dist as an alternative: we are no
   longer compatible with pkgx (go-zpkg/packages#431), so `ZPKG_DIST` +
   `ZPKG_VERIFY=0` against its pantry is not something this resolver can
   promise. The namespace the default currently sits in is a deployment fact
   that is being wound down, not our name
-- `ZPKG_VERIFY` — verify bottle signatures, fail-closed (default on; set
+- `ZPKG_VERIFY` — verify artifact signatures, fail-closed (default on; set
   `0`/`false`/`no`/`off` to disable)
-- `ZPKG_TRUSTED_KEYS` — who may vouch for a bottle: `name:KEY` entries,
+- `ZPKG_TRUSTED_KEYS` — who may vouch for an artifact: `name:KEY` entries,
   whitespace separated, **replacing** the built-in `go-zpkg` key
 - `ZPKG_EXTRA_TRUSTED_KEYS` — the same, **added** to it. Usually what you
   want: replacing the list by hand is how the entry that made everything work
   gets dropped
 - `ZPKG_TRUST_THRESHOLD` — how many **distinct** trusted keys must have signed
-  (default `1`). See [below](#two-builders-one-bottle)
+  (default `1`). See [below](#two-builders-one-artifact)
 - `ZPKG_DEPRECATED` — a JSON file of end-of-life release lines per project,
   `{"openssl.org": ["3.6"]}`, which **replaces** the list built into the
   binary; `{}` turns the preference off. Named and unreadable is an empty list
@@ -1326,14 +1326,14 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
   [above](#an-abandoned-release-line-is-not-what-you-get-by-default)
 
 By default `zpkgx <pkg>` fetches from the signed registry and verifies each
-bottle's signature before running it — no env needed.
+artifact's signature before running it — no env needed.
 
-### Two builders, one bottle
+### Two builders, one artifact
 
-Two people who build the same inputs get the **same** bottle, hash and all —
+Two people who build the same inputs get the **same** artifact, hash and all —
 deliberately, because an identity that varied with the builder could never be
 compared. So you do not tell them apart by the artefact; you tell them apart
-by **who signed it**. Each attaches their own signature to the one bottle,
+by **who signed it**. Each attaches their own signature to the one artifact,
 and the client counts how many distinct trusted keys it can verify.
 
 ```sh
@@ -1349,10 +1349,10 @@ a name on the artefact is written by whoever pushed it. A row marked `⚠` does
 not meet your threshold and will be refused at install time; a `?` means the
 registry could not be asked, which is not the same as "nobody signed it".
 
-Beside it, **BUILT BY** — read from the bottle's in-toto provenance, which is
+Beside it, **BUILT BY** — read from the artifact's in-toto provenance, which is
 the only place the builder is recorded, because the builder is deliberately
 *not* part of a build's identity (a `zbk` release must not re-address every
-bottle in the registry; Nix and Spack take the same position). So *what made
+artifact in the registry; Nix and Spack take the same position). So *what made
 this* and *who vouches for it* are two questions, and the table answers both:
 
 ```
@@ -1361,7 +1361,7 @@ HASH    INSTALLED  PUBLISHED  SIGNED BY  BUILT BY    WHAT
 (none)  -          yes        go-zpkg    bk@v0.26.0  nothing recorded
 ```
 
-`not recorded` means the bottle carries no provenance, `?` that the registry
+`not recorded` means the artifact carries no provenance, `?` that the registry
 was never asked, and `zbk (no version)` a builder id that names a tool and not
 a release — all three are different facts and none of them is the others.
 
@@ -1369,10 +1369,10 @@ Flags come **before** the project, as Go's flag parsing requires.
 
 A signature by a key outside your trust set is counted and ignored rather than
 treated as an error: anybody may sign a public artefact, and if a stranger's
-signature invalidated a bottle, invalidating any bottle would cost one push.
+signature invalidated an artifact, invalidating any artifact would cost one push.
 
 The other half lives in `zbk`: rebuild, compare with `zbk reproduce`, and
-`zbk sign` attaches your signature to the published bottle — refusing, by
+`zbk sign` attaches your signature to the published artifact — refusing, by
 default, when your rebuild produced different bytes. That refusal is the
 finding.
 
@@ -1396,11 +1396,11 @@ ZPKG_VERIFY = true                               # fail-closed signature check
 ⛔ **Two of those defaults are dependencies being wound down, and the file
 does not say so on its own.** `ZPKG_DIST` points at `ghcr.io/go-pkgx/packages`
 because GitHub's container packages are **org-scoped and did not follow the
-repository transfer** — every repository moved and every bottle stayed, so
+repository transfer** — every repository moved and every artifact stayed, so
 that registry is the live one and spelling the new name here would point at an
 empty namespace (it shipped that way once, in v0.64.0 through v0.68.0).
 `ZPKG_PANTRY` defaults to `pkgxdev/pantry` because the resolver still reads it
-with our own recipes merged over the top (`bottle/zpkg.go:68`).
+with our own recipes merged over the top (`artifact/zpkg.go:68`).
 
 Both end the same way and in this order: recipes **written** from each
 project's own build files — not converted, because that corpus carries no
@@ -1414,9 +1414,9 @@ back to environment variables and built-in defaults).
 
 ## Design
 
-Pure Go, cgo disabled. On `FROM scratch` it reads each bottle's ELF `DT_NEEDED`
+Pure Go, cgo disabled. On `FROM scratch` it reads each artifact's ELF `DT_NEEDED`
 to auto-complete the implicit libc/gcc closure the pantry graph omits, then
-execs through the glibc bottle's own loader so the program and its children
+execs through the glibc artifact's own loader so the program and its children
 resolve.
 BSD-3-Clause.
 
@@ -1425,7 +1425,7 @@ BSD-3-Clause.
 That order is load-bearing, and getting it wrong is how every ELF stopped
 running on `FROM scratch`.
 
-glibc's bottle puts `libc.so.6` in `lib/glibc-2.44/`; `lib/` itself holds
+glibc's artifact puts `libc.so.6` in `lib/glibc-2.44/`; `lib/` itself holds
 nothing. That versioned directory reaches `LD_LIBRARY_PATH` only when the
 loader that will read it is **ours** — exporting it to a host loader pairs two
 halves of different glibcs and fails on `__pointer_chk_guard`, which once took
@@ -1469,7 +1469,7 @@ list because it is big-endian and nothing else here is, and this program reads
 formats it did not write — ELF headers, OCI manifests, tar and xz streams.
 
 Windows gets its own lane rather than a build check: `windows-run` builds
-`pkgx.exe` on a real Windows runner, fabricates a Windows bottle, serves it,
+`pkgx.exe` on a real Windows runner, fabricates a Windows artifact, serves it,
 and asserts that `pkgx.exe` fetches it, execs the `.exe`, and propagates both
 its output and its exit code.
 
@@ -1485,11 +1485,11 @@ theorised: an index naming `../outside` completed to
 
 and that `✓ 9.9.9` is a directory **outside `$ZPKG_DIR`**, reported as
 installed — because the note beside a completion asks
-`bottle.InstalledVersions`, which does `filepath.Join(dir, project)`.
-`bottle.UnmarshalCatalog` refuses the name outright (*"has a `..` segment"*);
+`artifact.InstalledVersions`, which does `filepath.Join(dir, project)`.
+`artifact.UnmarshalCatalog` refuses the name outright (*"has a `..` segment"*);
 the index reader built its catalogue by hand and so never asked.
 
-The fix is to call `bottle.ValidateProjectName` — **the same validator**, not a
+The fix is to call `artifact.ValidateProjectName` — **the same validator**, not a
 second one. A fast path that reaches the same data must apply the same checks:
 the guard belongs to the data, not to whichever reader got there first. The
 regression test is a pair, because a validator that refused everything would

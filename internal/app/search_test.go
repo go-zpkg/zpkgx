@@ -5,17 +5,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-func cmdCatalog() bottle.Catalog {
-	return bottle.Catalog{
+func cmdCatalog() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-06T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "crates.io/ripgrep", Versions: []string{"14.1.1"}, Provides: []string{"rg"}},
 			{Project: "aardvark.io/rgbds", Versions: []string{"0.9.0"}, Provides: []string{"rgbasm"}},
 			{Project: "stedolan.github.io/jq", Versions: []string{"1.8.1"}, Provides: []string{"jq"}},
-			{Project: "gnu.org/gcc", Provides: []string{"gcc", "g++"}}, // no bottle here
+			{Project: "gnu.org/gcc", Provides: []string{"gcc", "g++"}}, // no artifact here
 		},
 	}
 }
@@ -49,13 +49,13 @@ func TestSearchFindsAPackageByItsCommand(t *testing.T) {
 
 // A project with nothing for this platform is still a result, marked: the
 // reader asked which package provides gcc, and "none" would be false.
-func TestSearchMarksWhatHasNoBottleHere(t *testing.T) {
+func TestSearchMarksWhatHasNoArtifactHere(t *testing.T) {
 	withCatalog(t, cmdCatalog(), nil)
 	var out bytes.Buffer
 	if code := runSearch([]string{"gcc"}, &out, &bytes.Buffer{}); code != 0 {
 		t.Fatalf("code=%d", code)
 	}
-	if !strings.Contains(out.String(), "gnu.org/gcc") || !strings.Contains(out.String(), noBottle) {
+	if !strings.Contains(out.String(), "gnu.org/gcc") || !strings.Contains(out.String(), noArtifact) {
 		t.Errorf("out=%q", out.String())
 	}
 }
@@ -95,9 +95,9 @@ func TestSearchWithNoResults(t *testing.T) {
 // ghcr the day this lands — and a reader deserves to know which they are
 // looking at.
 func TestSearchSaysWhenTheCatalogueCannotAnswer(t *testing.T) {
-	withCatalog(t, bottle.Catalog{
+	withCatalog(t, artifact.Catalog{
 		Generated: "2026-10-06T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "crates.io/ripgrep", Versions: []string{"14.1.1"}}, // no Provides
 		},
 	}, nil)
@@ -125,7 +125,7 @@ func TestSearchSaysWhenTheCatalogueCannotAnswer(t *testing.T) {
 //
 // Measured 2026-10-20 against the published catalogue: `zpkgs search json`
 // returns THIRTEEN projects and none of them is `stedolan.github.io/jq`. jq
-// is in that catalogue, with the command `jq` and a bottle for this
+// is in that catalogue, with the command `jq` and an artifact for this
 // platform — the word "json" is simply in neither its path nor its
 // commands, and only 6 of 1938 projects carry a description for a search to
 // read. Thirteen answers read as a complete answer, so the reader concludes
@@ -185,14 +185,14 @@ func TestASearchWithResultsStillSaysWhatItCouldNotRead(t *testing.T) {
 // A long result list is cut, and SAYS it was: a reader who sees twenty
 // lines and no more has no way to know whether the twenty-first was theirs.
 func TestSearchLimitsAndSaysSo(t *testing.T) {
-	var projects []bottle.CatalogProject
+	var projects []artifact.CatalogProject
 	for i := 0; i < 30; i++ {
-		projects = append(projects, bottle.CatalogProject{
+		projects = append(projects, artifact.CatalogProject{
 			Project:  "x.org/thing" + string(rune('a'+i%26)) + string(rune('0'+i/26)),
 			Provides: []string{"grep-like"},
 		})
 	}
-	withCatalog(t, bottle.Catalog{Generated: "2026-10-06T09:00:00Z", Projects: projects}, nil)
+	withCatalog(t, artifact.Catalog{Generated: "2026-10-06T09:00:00Z", Projects: projects}, nil)
 
 	var out, errb bytes.Buffer
 	if code := runSearch([]string{"grep-like"}, &out, &errb); code != 0 {

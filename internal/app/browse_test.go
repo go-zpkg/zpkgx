@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-func testCatalog() bottle.Catalog {
-	return bottle.Catalog{
+func testCatalog() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-05T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "zlib.net", Versions: []string{"1.3.2"}},
 			{Project: "curl.se", Versions: []string{"8.17.0"}},
 			{Project: "curl.se/ca-certs", Versions: []string{"2026.09.25"}},
@@ -23,10 +23,10 @@ func testCatalog() bottle.Catalog {
 	}
 }
 
-func withCatalog(t *testing.T, c bottle.Catalog, err error) {
+func withCatalog(t *testing.T, c artifact.Catalog, err error) {
 	t.Helper()
 	prev := catalogFor
-	catalogFor = func() (bottle.Catalog, error) { return c, err }
+	catalogFor = func() (artifact.Catalog, error) { return c, err }
 	t.Cleanup(func() { catalogFor = prev })
 	// And an EMPTY store, because a browse test must not read the store of
 	// whoever runs it. Without this the ✓ marks come from ~/.pkgx: the
@@ -53,7 +53,7 @@ func withCatalog(t *testing.T, c bottle.Catalog, err error) {
 func withoutNameIndex(t *testing.T) {
 	t.Helper()
 	prev := indexFor
-	indexFor = func(string, string) (bottle.Catalog, bool) { return bottle.Catalog{}, false }
+	indexFor = func(string, string) (artifact.Catalog, bool) { return artifact.Catalog{}, false }
 	t.Cleanup(func() { indexFor = prev })
 }
 
@@ -84,7 +84,7 @@ func TestLsShowsWhatIsUnderANode(t *testing.T) {
 	}
 	// The header says which catalogue — by PATH, since nothing is fetched
 	// on this path any more — and how old.
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	if !strings.Contains(errb.String(), "catalogue "+catalogPath(osn, arch)) {
 		t.Errorf("no provenance header: %q", errb.String())
 	}
@@ -141,7 +141,7 @@ func TestLsFallsBackToTheStoreAndSaysSo(t *testing.T) {
 		}
 	}
 	t.Setenv("ZPKG_DIR", dir)
-	withCatalog(t, bottle.Catalog{}, os.ErrDeadlineExceeded)
+	withCatalog(t, artifact.Catalog{}, os.ErrDeadlineExceeded)
 
 	var out, errb bytes.Buffer
 	if code := runLs(nil, &out, &errb); code != 0 {
@@ -252,10 +252,10 @@ func TestCompletionSnippets(t *testing.T) {
 	}
 }
 
-func depTestCatalog() bottle.Catalog {
-	return bottle.Catalog{
+func depTestCatalog() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-05T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "curl.se", Versions: []string{"8.17.0"}, Deps: []string{"openssl.org", "zlib.net", "gone.invalid"}},
 			{Project: "curl.se/ca-certs", Versions: []string{"2026.09.25"}},
 			{Project: "openssl.org", Versions: []string{"3.6.4"}, Deps: []string{"zlib.net"}},
@@ -347,7 +347,7 @@ func TestLsOfAPackageWithNoDependencies(t *testing.T) {
 // the local store under a header blaming the registry.
 func TestAnUnreadableNamedCatalogueIsRefused(t *testing.T) {
 	prev := catalogFor
-	catalogFor = func() (bottle.Catalog, error) { return bottle.Catalog{}, os.ErrNotExist }
+	catalogFor = func() (artifact.Catalog, error) { return artifact.Catalog{}, os.ErrNotExist }
 	t.Cleanup(func() { catalogFor = prev })
 	t.Setenv("ZPKG_CATALOG", "/nope/absent.json")
 

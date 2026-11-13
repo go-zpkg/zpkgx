@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
@@ -307,7 +307,7 @@ func TestGhcrsRefusalForAnAbsentRepositoryIsAnAbsence(t *testing.T) {
 // are not things to ask somebody to publish.
 func TestTheHintAppearsOnlyForAPackageThatIsNotHere(t *testing.T) {
 	const project = "opendev.org/openstack/python-openstackclient"
-	absent := &bottle.NotPublishedError{
+	absent := &artifact.NotPublishedError{
 		Project: project, Registry: "ghcr.io", Repo: "go-zpkg/packages/…",
 		Err: errors.New("403: denied"),
 	}
@@ -316,7 +316,7 @@ func TestTheHintAppearsOnlyForAPackageThatIsNotHere(t *testing.T) {
 	// the mechanism — a type, matched through a wrap — and passed, while
 	// the shipped binary stayed silent for 567 of the 1940 projects in the
 	// darwin/aarch64 catalogue. Those are the ones with a recipe and no
-	// bottle HERE, which is a different error from "no such repository",
+	// artifact HERE, which is a different error from "no such repository",
 	// and the hint only knew the second. Measured 2026-10-23 by running
 	// zpkgx v0.25.0 against a name taken from `catstat -missing`, not from
 	// an example I already believed in:
@@ -327,9 +327,9 @@ func TestTheHintAppearsOnlyForAPackageThatIsNotHere(t *testing.T) {
 	//
 	// A good sentence, and a dead end.
 	var b bytes.Buffer
-	sayHowToAsk(&bottle.NoBottleHereError{
+	sayHowToAsk(&artifact.NoArtifactHereError{
 		Project: "aerc-mail.org", OS: "darwin", Arch: "aarch64",
-		Available: []bottle.Ver{bottle.ParseVer("0.22.0")}, Absent: []string{"0.22.0"},
+		Available: []artifact.Ver{artifact.ParseVer("0.22.0")}, Absent: []string{"0.22.0"},
 	}, &b)
 	if !strings.Contains(b.String(), "zpkgs request aerc-mail.org") {
 		t.Errorf("the COMMON absence gets no hint: %q", b.String())
@@ -352,14 +352,14 @@ func TestTheHintAppearsOnlyForAPackageThatIsNotHere(t *testing.T) {
 
 	// ⛔ THE FALSE POSITIVE THAT MADE THIS MATCH A TYPE. Its first live run
 	// fired on this exact sentence, where the package was published and the
-	// COMMAND was missing — bottle's prose fallback matched "not found".
+	// COMMAND was missing — artifact's prose fallback matched "not found".
 	// A hint that appears on unrelated failures teaches people to ignore
 	// hints.
 	//
 	// ⛔ AND THE 404 IS HERE ON PURPOSE, labelled for what it is: a bare
 	// registry 404 DOES mean the repository is absent, and it still gets no
 	// hint, because it names no project and a hint that says
-	// `zpkgs request <project>` is not an instruction. bottle wraps the
+	// `zpkgs request <project>` is not an instruction. artifact wraps the
 	// absences it resolves in *NotPublishedError; one arriving bare is a
 	// path that has not been given a project yet, and silence is the honest
 	// answer until it is. The cost of this choice is a missed hint, never a

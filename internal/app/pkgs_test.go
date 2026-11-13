@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // ⛔ EVERY DIAGNOSTIC NAMES THE BINARY THE USER TYPED.
@@ -70,7 +70,7 @@ func TestPkgxDoesNotInterceptAVerbThatIsAlsoAPackage(t *testing.T) {
 	// compares with ==. A fixture in the recipe's shape would make this
 	// test pass against a reader that strips "bin/" and fail against the
 	// one the program actually uses.
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/coreutils", Provides: []string{"ls", "env"}},
 	}}, nil)
 	for _, word := range []string{"ls", "env"} {
@@ -84,7 +84,7 @@ func TestPkgxDoesNotInterceptAVerbThatIsAlsoAPackage(t *testing.T) {
 // And a verb that is NOT a package is told where it went, rather than
 // failing with "no such package" three layers down.
 func TestPkgxPointsAtPkgsForAVerbNoPackageProvides(t *testing.T) {
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/coreutils", Provides: []string{"ls"}},
 	}}, nil)
 	var errb bytes.Buffer
@@ -113,7 +113,7 @@ func TestUnknownVerbIgnoresWhatIsNotAVerb(t *testing.T) {
 // absence is why nine verbs were put in the position upstream reserves for
 // a package.
 func TestQueryAnswersWhatProvidesACommand(t *testing.T) {
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/coreutils", Provides: []string{"ls", "env"}},
 		{Project: "busybox.net", Provides: []string{"ls"}},
 		{Project: "crates.io/ripgrep", Provides: []string{"rg"}},
@@ -241,7 +241,7 @@ func TestABareCommandRunsThatCommandNotTheProjectsFirstBinary(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	closure := []bottle.Resolved{{Project: proj, Version: bottle.ParseVer(ver)}}
+	closure := []artifact.Resolved{{Project: proj, Version: artifact.ParseVer(ver)}}
 
 	got, err := resolveBin(proj, "ls", nil, closure, dir)
 	if err != nil {
@@ -288,7 +288,7 @@ func TestABareCommandRunsThatCommandNotTheProjectsFirstBinary(t *testing.T) {
 // earlier test in this repo tested a function and not the wiring, and the
 // wiring was what was broken."
 func TestRunTargetKeepsTheTypedCommand(t *testing.T) {
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/coreutils", Provides: []string{"[", "ls"}},
 		{Project: "gnu.org/bash", Provides: []string{"bash"}},
 	}}, nil)
@@ -469,7 +469,7 @@ func TestEnvWithAnythingElseStillReachesCoreutils(t *testing.T) {
 // command", staleEnvCall says how to repair the profile. Asserting the
 // repair line asserts the wiring.
 func TestTheEnvNoteIsWiredIntoRun(t *testing.T) {
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/bash", Provides: []string{"bash"}},
 	}}, nil)
 	code, errb := capturePkgx(t, "env", "load")

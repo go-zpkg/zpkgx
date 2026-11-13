@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // Resolving the COMMAND a person knows to the project that provides it.
@@ -22,7 +22,7 @@ import (
 // while in the same store, the same minute:
 //
 //	$ zpkgx search hugo
-//	gohugo.io                                hugo  no bottle here
+//	gohugo.io                                hugo  no artifact here
 //
 // So the mapping was already in the catalogue and only the SEARCH path
 // consulted it. Their conclusion, and it is the right one: without this,
@@ -54,7 +54,7 @@ func bareWord(spec string) bool {
 // most once and only if it is asked something it needs the catalogue for.
 type commandMapper struct {
 	dir    string
-	cat    bottle.Catalog
+	cat    artifact.Catalog
 	src    string
 	err    error
 	loaded bool

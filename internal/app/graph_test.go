@@ -6,25 +6,25 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // fixture is the diamond that makes the point: two packages need z, and only
 // one of them has an opinion about which z.
-func fixture() *bottle.Graph {
-	v := func(s string) bottle.Ver { return bottle.Ver{Raw: s} }
-	return &bottle.Graph{
+func fixture() *artifact.Graph {
+	v := func(s string) artifact.Ver { return artifact.Ver{Raw: s} }
+	return &artifact.Graph{
 		Roots: []string{"app.org/main"},
-		Versions: map[string]bottle.Ver{
+		Versions: map[string]artifact.Ver{
 			"app.org/main": v("1.0.0"), "lib.org/a": v("1.4.0"),
 			"lib.org/b": v("2.0.0"), "lib.org/z": v("2.1.0"),
 		},
-		Deps: map[string][]bottle.Edge{
+		Deps: map[string][]artifact.Edge{
 			"app.org/main": {{Of: "app.org/main", On: "lib.org/a", Constraint: "^1"}, {Of: "app.org/main", On: "lib.org/b", Constraint: "*"}},
 			"lib.org/a":    {{Of: "lib.org/a", On: "lib.org/z", Constraint: "^2"}},
 			"lib.org/b":    {{Of: "lib.org/b", On: "lib.org/z", Constraint: "*"}},
 		},
-		Asks: map[string][]bottle.Edge{
+		Asks: map[string][]artifact.Edge{
 			"app.org/main": {{Of: "", On: "app.org/main", Constraint: "*"}},
 			"lib.org/a":    {{Of: "app.org/main", On: "lib.org/a", Constraint: "^1"}},
 			"lib.org/b":    {{Of: "app.org/main", On: "lib.org/b", Constraint: "*"}},
@@ -53,8 +53,8 @@ app.org/main 1.0.0
 // and over.
 func TestPrintTreeElidesARepeatedSubtree(t *testing.T) {
 	g := fixture()
-	g.Deps["lib.org/z"] = []bottle.Edge{{Of: "lib.org/z", On: "lib.org/deep", Constraint: "*"}}
-	g.Versions["lib.org/deep"] = bottle.Ver{Raw: "9.0.0"}
+	g.Deps["lib.org/z"] = []artifact.Edge{{Of: "lib.org/z", On: "lib.org/deep", Constraint: "*"}}
+	g.Versions["lib.org/deep"] = artifact.Ver{Raw: "9.0.0"}
 	var b bytes.Buffer
 	printTree(g, &b)
 	out := b.String()
@@ -87,7 +87,7 @@ func TestPrintContested(t *testing.T) {
 // empty heading.
 func TestPrintContestedSaysNothingWhenThereIsNothing(t *testing.T) {
 	g := fixture()
-	g.Asks["lib.org/z"] = []bottle.Edge{{Of: "lib.org/a", On: "lib.org/z", Constraint: "^2"}}
+	g.Asks["lib.org/z"] = []artifact.Edge{{Of: "lib.org/a", On: "lib.org/z", Constraint: "^2"}}
 	var b bytes.Buffer
 	printContested(g, &b)
 	if b.Len() != 0 {
@@ -98,7 +98,7 @@ func TestPrintContestedSaysNothingWhenThereIsNothing(t *testing.T) {
 // A root is asked for by nobody, and saying so beats an empty arrow.
 func TestPrintContestedNamesARequestedRoot(t *testing.T) {
 	g := fixture()
-	g.Asks["lib.org/z"] = append(g.Asks["lib.org/z"], bottle.Edge{Of: "", On: "lib.org/z", Constraint: "=2.1.0"})
+	g.Asks["lib.org/z"] = append(g.Asks["lib.org/z"], artifact.Edge{Of: "", On: "lib.org/z", Constraint: "=2.1.0"})
 	var b bytes.Buffer
 	printContested(g, &b)
 	if !strings.Contains(b.String(), "← (requested)") {
@@ -116,7 +116,7 @@ func TestSplitFormatGraph(t *testing.T) {
 func TestPrintGraph(t *testing.T) {
 	old := graphFor
 	defer func() { graphFor = old }()
-	graphFor = func(map[string]string, string, string) (*bottle.Graph, error) { return fixture(), nil }
+	graphFor = func(map[string]string, string, string) (*artifact.Graph, error) { return fixture(), nil }
 
 	var b bytes.Buffer
 	if err := printGraph(map[string]string{"app.org/main": "*"}, "linux", "x86-64", &b); err != nil {
@@ -133,7 +133,7 @@ func TestPrintGraph(t *testing.T) {
 func TestPrintGraphPropagatesTheRefusal(t *testing.T) {
 	old := graphFor
 	defer func() { graphFor = old }()
-	graphFor = func(map[string]string, string, string) (*bottle.Graph, error) {
+	graphFor = func(map[string]string, string, string) (*artifact.Graph, error) {
 		return nil, errors.New("no version of unicode.org satisfies \"^71\" AND \"^73\"")
 	}
 	var b bytes.Buffer
@@ -150,7 +150,7 @@ func TestPrintGraphPropagatesTheRefusal(t *testing.T) {
 // blank where a demand should be.
 func TestPrintContestedShowsAnEmptyConstraintAsStar(t *testing.T) {
 	g := fixture()
-	g.Asks["lib.org/z"] = []bottle.Edge{
+	g.Asks["lib.org/z"] = []artifact.Edge{
 		{Of: "lib.org/a", On: "lib.org/z", Constraint: "^2"},
 		{Of: "lib.org/b", On: "lib.org/z", Constraint: ""},
 	}
@@ -165,13 +165,13 @@ func TestPrintContestedShowsAnEmptyConstraintAsStar(t *testing.T) {
 // version there would answer "which libxml2 is in this closure" with a
 // half-truth, and the whole point of the split is that the answer is two.
 func TestVersionLabelNamesBothABILines(t *testing.T) {
-	g := &bottle.Graph{
-		Versions: map[string]bottle.Ver{
-			"gnome.org/libxml2": bottle.ParseVer("2.15.4"),
-			"zlib.net":          bottle.ParseVer("1.3.2"),
+	g := &artifact.Graph{
+		Versions: map[string]artifact.Ver{
+			"gnome.org/libxml2": artifact.ParseVer("2.15.4"),
+			"zlib.net":          artifact.ParseVer("1.3.2"),
 		},
-		Lines: map[string][]bottle.Ver{
-			"gnome.org/libxml2": {bottle.ParseVer("2.15.4"), bottle.ParseVer("2.13.9")},
+		Lines: map[string][]artifact.Ver{
+			"gnome.org/libxml2": {artifact.ParseVer("2.15.4"), artifact.ParseVer("2.13.9")},
 		},
 	}
 	got := versionLabel(g, "gnome.org/libxml2")
@@ -198,7 +198,7 @@ func TestPrintGraphResolvesForThePlatformItWasGiven(t *testing.T) {
 	old := graphFor
 	defer func() { graphFor = old }()
 	var gotOS, gotArch string
-	graphFor = func(_ map[string]string, osn, arch string) (*bottle.Graph, error) {
+	graphFor = func(_ map[string]string, osn, arch string) (*artifact.Graph, error) {
 		gotOS, gotArch = osn, arch
 		return fixture(), nil
 	}

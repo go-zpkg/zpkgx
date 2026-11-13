@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx search` — for when you know the COMMAND and not the package.
@@ -50,7 +50,7 @@ func runSearch(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	cat, src, err := browseCatalog(bottle.Dir())
+	cat, src, err := browseCatalog(artifact.Dir())
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"ZPKG_CATALOG names %s and it cannot be read: %v\n", src, err)
 		return 2
@@ -97,7 +97,7 @@ const proseFloor = 5
 // answers THIRTEEN THINGS reads as a complete answer. Measured 2026-10-20 on
 // the published catalogue, `search json` returns 13 projects and none of
 // them is `stedolan.github.io/jq` — jq IS there, with the command `jq` and a
-// bottle, and the word "json" appears in neither its path nor its commands.
+// artifact, and the word "json" appears in neither its path nor its commands.
 // Nothing in that output suggests jq exists, so the reader concludes it is
 // not packaged. That is the quietest kind of wrong answer, and one line of
 // stderr is the whole fix.
@@ -105,7 +105,7 @@ const proseFloor = 5
 // On stderr, so `zpkgs search x > list` still writes only results; and only
 // when the catalogue really is thin, so a future one with descriptions is
 // silent rather than nagging.
-func sayProseIsThin(cat bottle.Catalog, stderr io.Writer) {
+func sayProseIsThin(cat artifact.Catalog, stderr io.Writer) {
 	with, total := proseCoverage(cat)
 	if total == 0 || with*proseFloor >= total {
 		return
@@ -114,7 +114,7 @@ func sayProseIsThin(cat bottle.Catalog, stderr io.Writer) {
 		pfx(), with, total)
 }
 
-func proseCoverage(cat bottle.Catalog) (with, total int) {
+func proseCoverage(cat artifact.Catalog) (with, total int) {
 	for _, p := range cat.Projects {
 		total++
 		if strings.TrimSpace(p.Summary) != "" {
@@ -129,7 +129,7 @@ func proseCoverage(cat bottle.Catalog) (with, total int) {
 // An unexplained list of forty projects is a list nobody reads to the end.
 // A command hit shows the command, because that is the word the reader
 // typed and the thing they will run.
-func searchNote(cat bottle.Catalog, h bottle.SearchHit) string {
+func searchNote(cat artifact.Catalog, h artifact.SearchHit) string {
 	var parts []string
 	switch h.Why {
 	case "command":
@@ -142,7 +142,7 @@ func searchNote(cat bottle.Catalog, h bottle.SearchHit) string {
 		case len(p.Versions) > 0:
 			parts = append(parts, p.Versions[0])
 		case knowsVersions(cat):
-			parts = append(parts, noBottle)
+			parts = append(parts, noArtifact)
 		}
 		parts = append(parts, strings.TrimSpace(haveNote(h.Project, firstVersion(p))))
 	}
@@ -155,7 +155,7 @@ func searchNote(cat bottle.Catalog, h bottle.SearchHit) string {
 	return strings.Join(out, "  ")
 }
 
-func firstVersion(p bottle.CatalogProject) string {
+func firstVersion(p artifact.CatalogProject) string {
 	if len(p.Versions) == 0 {
 		return ""
 	}
@@ -166,7 +166,7 @@ func firstVersion(p bottle.CatalogProject) string {
 // all, the same way knowsVersions reports on versions: there is no flag,
 // and the only evidence is that a catalogue which has them has them
 // somewhere.
-func knowsCommands(cat bottle.Catalog) bool {
+func knowsCommands(cat artifact.Catalog) bool {
 	for _, p := range cat.Projects {
 		if len(p.Provides) > 0 {
 			return true

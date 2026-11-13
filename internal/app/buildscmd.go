@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgs builds <project>@<version>` — which builds of one version exist.
@@ -41,14 +41,14 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("builds", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	platform := fs.String("platform", "", "ask about `os/arch` instead of this machine")
-	// ⛔ THE KEYS ARE bottle's, NOT A SECOND LIST. A flag that enumerated
+	// ⛔ THE KEYS ARE artifact's, NOT A SECOND LIST. A flag that enumerated
 	// them here would disagree with the library the first time one was
 	// added, and the disagreement would be a usage string that lies.
-	sortBy := fs.String("sort", string(bottle.ByStatus), sortFlagHelp())
+	sortBy := fs.String("sort", string(artifact.ByStatus), sortFlagHelp())
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	order, err := bottle.ParseBuildOrder(*sortBy)
+	order, err := artifact.ParseBuildOrder(*sortBy)
 	if err != nil {
 		fmt.Fprintln(stderr, pfx()+"builds --sort: "+err.Error())
 		// ⛔ AND "date" IS ANSWERED, NOT JUST REFUSED. It is the key a reader
@@ -56,7 +56,7 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 		// rather than an oversight — so the refusal explains it instead of
 		// leaving them to assume the feature is missing.
 		if *sortBy == "date" {
-			fmt.Fprintln(stderr, pfx()+bottle.WhyNoDate)
+			fmt.Fprintln(stderr, pfx()+artifact.WhyNoDate)
 		}
 		return 2
 	}
@@ -96,12 +96,12 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 	//
 	// So ask HERE, before drawing anything. A command validates its own
 	// configuration before it draws a table whose columns depend on it.
-	if _, err := bottle.LoadTrustSet(); err != nil {
+	if _, err := artifact.LoadTrustSet(); err != nil {
 		fmt.Fprintln(stderr, pfx()+"builds: "+err.Error())
 		return 2
 	}
 
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	if *platform != "" {
 		o, a, cut := strings.Cut(*platform, "/")
 		if !cut || o == "" || a == "" {
@@ -111,8 +111,8 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 		osn, arch = o, a
 	}
 
-	builds, err := bottle.BuildsOf(project, version, bottle.Dir(), osn, arch)
-	bottle.SortBuilds(project, builds, order)
+	builds, err := artifact.BuildsOf(project, version, artifact.Dir(), osn, arch)
+	artifact.SortBuilds(project, builds, order)
 	// ⛔ THE ERROR DOES NOT SUPPRESS THE ANSWER. BuildsOf returns the
 	// installed half alongside a registry failure precisely so this can print
 	// what it knows and say what it could not learn.
@@ -133,10 +133,10 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 	// assume the build is gone; it is not, it is ranked last — and a lock
 	// that pins it still works, which is the whole reason the mechanism
 	// ranks rather than filters.
-	if note := bottle.WithdrawnNote(project, builds); note != "" {
+	if note := artifact.WithdrawnNote(project, builds); note != "" {
 		fmt.Fprintf(stdout, "\n%s\n", note)
 	}
-	fmt.Fprintf(stdout, "\ninstalled under %s; name one with: %s@%s/<hash>\n", bottle.Dir(), project, version)
+	fmt.Fprintf(stdout, "\ninstalled under %s; name one with: %s@%s/<hash>\n", artifact.Dir(), project, version)
 	return boolExit(err != nil)
 }
 
@@ -147,9 +147,9 @@ func runBuilds(args []string, stdout, stderr io.Writer) int {
 // THE READER IS NO BETTER OFF. A hash is opaque by construction; shown two of
 // them with nothing beside them, a caller has no way to choose and this
 // command has handed back the problem it was asked to solve. The WHAT column
-// is bottle.Distinguish: the axes on which these builds differ FROM EACH
+// is artifact.Distinguish: the axes on which these builds differ FROM EACH
 // OTHER, which is the only short answer that is also a useful one.
-func printBuilds(w io.Writer, project string, builds []bottle.Build, registryUnknown bool) {
+func printBuilds(w io.Writer, project string, builds []artifact.Build, registryUnknown bool) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	published := "PUBLISHED"
 	if registryUnknown {
@@ -158,9 +158,9 @@ func printBuilds(w io.Writer, project string, builds []bottle.Build, registryUnk
 	what := describeEach(project, builds)
 	fmt.Fprintf(tw, "HASH\tINSTALLED\t%s\tSIGNED BY\tBUILT BY\tWHAT\n", published)
 	for i, b := range builds {
-		// ⛔⛔ A BOTTLE WITH NO HASH IS NOT A BLANK CELL. Today's registry is
+		// ⛔⛔ A ARTIFACT WITH NO HASH IS NOT A BLANK CELL. Today's registry is
 		// full of them: every tag published before builds had identities is
-		// a plain `3.3.11`, and so is every bottle we only mirrored. Printing
+		// a plain `3.3.11`, and so is every artifact we only mirrored. Printing
 		// "" there produces a row the reader cannot name, cannot pass to
 		// `@version/<hash>`, and cannot tell from a rendering fault. It is
 		// also the one row that is genuinely ambiguous, so it says so.
@@ -202,22 +202,22 @@ func printBuilds(w io.Writer, project string, builds []bottle.Build, registryUnk
 	// own and they can print it.
 	//
 	// ⛔ AND IT DOES NOT CLAIM ZPKG_VERIFY=0 WARNS. It does not: the check
-	// returns early and says nothing (bottle's verifyPulledDigest). Writing
+	// returns early and says nothing (artifact's verifyPulledDigest). Writing
 	// "installs anyway, and says so" would have been a promise this stack
 	// does not keep.
 	for _, b := range builds {
 		if b.Signatures != nil && !b.Signatures.OK() {
 			fmt.Fprintf(w, "\n⚠ a row marked ⚠ does not meet your %s and will be REFUSED at install time\n  (%s=0 skips the check entirely, silently).\n",
-				bottle.TrustThresholdEnv, "ZPKG_VERIFY")
+				artifact.TrustThresholdEnv, "ZPKG_VERIFY")
 			break
 		}
 	}
 	// Said once, under the table, and only when there is such a row: a
-	// reader meeting "(none)" needs to know it is a fact about the bottle
+	// reader meeting "(none)" needs to know it is a fact about the artifact
 	// and not about this command.
 	for _, b := range builds {
 		if b.Hash() == "" {
-			fmt.Fprintln(w, "\n(none) is a bottle published before builds carried an identity, or one that was only mirrored:\nnothing records what it was built from, so it cannot be named by hash.")
+			fmt.Fprintln(w, "\n(none) is an artifact published before builds carried an identity, or one that was only mirrored:\nnothing records what it was built from, so it cannot be named by hash.")
 			break
 		}
 	}
@@ -229,14 +229,14 @@ func printBuilds(w io.Writer, project string, builds []bottle.Build, registryUnk
 // ⛔⛔ "NOT ASKED" IS NOT "NOBODY", AND THE TWO MUST NOT RENDER ALIKE. A nil
 // report means the registry was never reached for this row — printing
 // "unsigned" there would turn a network failure into a claim about the
-// artefact, which is exactly how someone ends up trusting a bottle nobody
+// artefact, which is exactly how someone ends up trusting an artifact nobody
 // signed, or rebuilding one that was fine. "?" is the same convention the
 // PUBLISHED column already uses, for the same reason.
 //
 // ⛔ AND THE NAMES ARE OURS, NOT THE REGISTRY'S. A name on the artefact is
 // written by whoever pushed it; what appears here comes from the local trust
 // set, which is the only place a name means anything.
-func signedBy(b bottle.Build) string {
+func signedBy(b artifact.Build) string {
 	if b.Signatures == nil {
 		return "?"
 	}
@@ -255,7 +255,7 @@ func signedBy(b bottle.Build) string {
 // EACH OTHER" would break that contract for every reader who relies on it.
 //
 // ⛔ AND IT IS NOT IN THE HASH, WHICH IS WHY THE COLUMN EXISTS AT ALL. A zbk
-// release must not re-address every bottle in the registry — Nix and Spack
+// release must not re-address every artifact in the registry — Nix and Spack
 // take the same position — so two factories building identical inputs produce
 // the SAME identity, and this is the only thing that tells them apart.
 //
@@ -263,7 +263,7 @@ func signedBy(b bottle.Build) string {
 //
 //	?               the registry was never asked (the PUBLISHED column's own
 //	                convention, same reason)
-//	not recorded    it was asked, and the bottle carries no provenance —
+//	not recorded    it was asked, and the artifact carries no provenance —
 //	                which is most of the registry today
 //	bk (no version) a builder id that names a tool and not a release
 //	zbk@v0.64.0     what built it
@@ -274,37 +274,37 @@ func signedBy(b bottle.Build) string {
 // `https://github.com/go-pkgx/bk` — no version at all — on darwin/aarch64.
 // That is the defect zbk's own builderWithVersion comment records ("A BUILDER
 // THAT NEVER CHANGES CANNOT TELL TWO BUILDS APART"), still sitting in the
-// registry on every bottle published before it was fixed. Printing a bare
+// registry on every artifact published before it was fixed. Printing a bare
 // `bk` would hand the reader a tool name shaped exactly like an answer, so
 // the cell says which kind of answer it is.
-func builtBy(b bottle.Build) string {
+func builtBy(b artifact.Build) string {
 	if b.Signatures == nil {
 		return "?"
 	}
 	if b.Builder == "" {
 		return "not recorded"
 	}
-	s := bottle.ShortBuilder(b.Builder)
+	s := artifact.ShortBuilder(b.Builder)
 	if !strings.Contains(s, "@") {
 		return s + " (no version)"
 	}
 	return s
 }
 
-// sortFlagHelp names the keys bottle offers, so the usage cannot drift from
+// sortFlagHelp names the keys artifact offers, so the usage cannot drift from
 // the library the first time one is added.
 func sortFlagHelp() string {
-	names := make([]string, 0, len(bottle.BuildOrders))
-	for _, o := range bottle.BuildOrders {
+	names := make([]string, 0, len(artifact.BuildOrders))
+	for _, o := range artifact.BuildOrders {
 		names = append(names, string(o))
 	}
 	return "order the list by `key`: " + strings.Join(names, ", ")
 }
 
-// bottleWithdrawalOf is a seam: the withdrawal list is read once per process
+// artifactWithdrawalOf is a seam: the withdrawal list is read once per process
 // from a file, so a test that went through it would measure whichever test
 // ran first.
-var bottleWithdrawalOf = bottle.WithdrawalOf
+var artifactWithdrawalOf = artifact.WithdrawalOf
 
 // describeEach is the WHAT column: what each build is, in the terms that tell
 // it apart from the others listed beside it.
@@ -315,12 +315,12 @@ var bottleWithdrawalOf = bottle.WithdrawalOf
 // same cell, because a warning that does not say where to go next leaves them
 // comparing hashes, which is what the column exists to spare them.
 //
-// ⛔ AND A BUILD NOTHING RECORDS SAYS SO. Every bottle published before
+// ⛔ AND A BUILD NOTHING RECORDS SAYS SO. Every artifact published before
 // identities existed is one of these; an empty cell reads as a rendering
 // fault rather than as the truth, which is that nothing was ever written
 // down about how it was made.
-func describeEach(project string, builds []bottle.Build) []string {
-	specs := make([]bottle.Concrete, len(builds))
+func describeEach(project string, builds []artifact.Build) []string {
+	specs := make([]artifact.Concrete, len(builds))
 	for i, b := range builds {
 		specs[i] = b.Spec
 	}
@@ -328,15 +328,15 @@ func describeEach(project string, builds []bottle.Build) []string {
 	if len(builds) == 1 {
 		// Nothing to be told apart from, so the whole of what was recorded
 		// is the useful answer — summarised.
-		diff = []string{bottle.Describe(specs[0])}
+		diff = []string{artifact.Describe(specs[0])}
 	} else {
-		diff = bottle.Distinguish(specs)
+		diff = artifact.Distinguish(specs)
 	}
 
 	out := make([]string, len(builds))
 	for i, b := range builds {
 		var parts []string
-		if w, yes := bottleWithdrawalOf(project, b.Version.Raw, b.Hash()); yes {
+		if w, yes := artifactWithdrawalOf(project, b.Version.Raw, b.Hash()); yes {
 			parts = append(parts, "⚠ "+w.String())
 		}
 		switch {

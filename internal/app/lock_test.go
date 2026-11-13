@@ -7,24 +7,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-func withLock(t *testing.T, d bottle.Lock, err error) {
+func withLock(t *testing.T, d artifact.Lock, err error) {
 	t.Helper()
 	prevR, prevT := readLockFile, timeNow
-	readLockFile = func(string) (bottle.Lock, error) { return d, err }
+	readLockFile = func(string) (artifact.Lock, error) { return d, err }
 	timeNow = func() time.Time { return time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC) }
 	t.Cleanup(func() { readLockFile, timeNow = prevR, prevT })
 }
 
-func hostLock() bottle.Lock {
-	osn, arch := bottle.HostSlug()
-	return bottle.Lock{
-		Version: bottle.LockfileVersion, Platform: osn + "/" + arch,
-		Generated: "2026-10-06T09:00:00Z", BK: "v0.12.0",
+func hostLock() artifact.Lock {
+	osn, arch := artifact.HostSlug()
+	return artifact.Lock{
+		Version: artifact.LockfileVersion, Platform: osn + "/" + arch,
+		Generated: "2026-10-06T09:00:00Z", ZBK: "v0.12.0",
 		Roots: []string{"curl.se"},
-		Pins: []bottle.LockPin{
+		Pins: []artifact.LockPin{
 			{Project: "curl.se", Version: "8.17.0", Spec: "sha256:a"},
 			{Project: "openssl.org", Version: "3.6.0", Spec: "sha256:b"},
 			{Project: "zlib.net", Version: "1.3.2", Spec: "sha256:c"},
@@ -54,7 +54,7 @@ func TestEveryPinBecomesAnExactRoot(t *testing.T) {
 }
 
 // A lock records the platform it was taken on because the platform CHANGES
-// the answer: 537 of 1908 projects available on linux/x86-64 have no bottle
+// the answer: 537 of 1908 projects available on linux/x86-64 have no artifact
 // for darwin/aarch64. Running one on the other would fail late, inside the
 // resolver, with a message about a version rather than about the lock.
 func TestALockFromAnotherPlatformIsRefused(t *testing.T) {
@@ -129,12 +129,12 @@ func TestALockCannotBeMixedWithPlus(t *testing.T) {
 // An unreadable lock is an error, not an empty set: materialising nothing
 // and reporting success is how a build silently stops being locked.
 func TestAnUnreadableLockFails(t *testing.T) {
-	withLock(t, bottle.Lock{}, errors.New("no such file"))
+	withLock(t, artifact.Lock{}, errors.New("no such file"))
 	if code := run([]string{"--lock", "absent.hcl"}); code != 1 {
 		t.Errorf("an unreadable lock exited %d, want 1", code)
 	}
 	// And one that reads but pins nothing.
-	withLock(t, bottle.Lock{Platform: "", Generated: "2026-10-06T09:00:00Z"}, nil)
+	withLock(t, artifact.Lock{Platform: "", Generated: "2026-10-06T09:00:00Z"}, nil)
 	if code := run([]string{"--lock", "empty.hcl"}); code != 1 {
 		t.Errorf("a lock pinning nothing exited %d, want 1", code)
 	}

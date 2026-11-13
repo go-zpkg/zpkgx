@@ -154,7 +154,7 @@ func TestHumanReadsAsAPersonReads(t *testing.T) {
 // is not there. The difference is the code's business, not the reader's.
 //
 // This is the FROM scratch case: the image ships a catalogue and no
-// bottles, so $ZPKG_DIR exists and has no projects under it. The first
+// artifacts, so $ZPKG_DIR exists and has no projects under it. The first
 // version printed "0 B over 0 version(s) of 0 project(s)", which is correct
 // and tells nobody anything — found by running it in the image, not by
 // reading the function.

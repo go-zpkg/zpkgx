@@ -1,14 +1,14 @@
 // Command zpkgx is a dependency-free, pure-Go implementation of the zpkgx
 // runtime: it runs packages on the fly, materialising each one's full
 // dependency closure on demand — from the signed OCI registry
-// oci://ghcr.io/go-pkgx/packages by default, verifying each bottle's signature
+// oci://ghcr.io/go-pkgx/packages by default, verifying each artifact's signature
 // (fail-closed) — with no runtime deps of its own (a single CGO_ENABLED=0 binary
 // that works on a `FROM scratch` image). Point ZPKG_DIST at the unsigned upstream
 // (https://dist.pkgx.dev) with ZPKG_VERIFY=0 for the full pantry.
 //
-// It shares its whole bottle backend — resolution, download, FROM-scratch
+// It shares its whole artifact backend — resolution, download, FROM-scratch
 // closure completion, and loader-aware exec — with zpkgm via the
-// github.com/go-zpkg/bottle package, so there is one source of truth.
+// github.com/go-zpkg/artifact package, so there is one source of truth.
 package app
 
 import (
@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // version is reported by `zpkgx --version`. It defaults to "dev" and is
@@ -67,7 +67,7 @@ usage:
                                      the same, for a platform you are not on:
                                      what a linux machine would resolve, asked
                                      from a mac. A version that exists but has
-                                     no bottle THERE is named as such, which
+                                     no artifact THERE is named as such, which
                                      is the answer a recipe author needs
   zpkgx -Q [command]                  what can be run: with a command, the
                                      project(s) that provide it, one per line
@@ -113,26 +113,26 @@ asking ABOUT packages is zpkgs, a separate command:
   long form of everything above.
 
 env:
-  ZPKG_DIR     bottle store (default: ~/.zpkg)
+  ZPKG_DIR     artifact store (default: ~/.zpkg)
   ZPKG_CATALOG read the catalogue from this file instead of $ZPKG_DIR/catalog —
                for an air-gapped image, or to inspect one before publishing.
                Named and unreadable is an error, not a quiet fallback
-  ZPKG_DIST    bottle source (default: oci://ghcr.io/go-pkgx/packages, the signed
+  ZPKG_DIST    artifact source (default: oci://ghcr.io/go-pkgx/packages, the signed
                registry; set https://dist.pkgx.dev for the full unsigned upstream
                pantry — pair with ZPKG_VERIFY=0)
-  ZPKG_VERIFY  verify bottle signatures, fail-closed (default: on; set
+  ZPKG_VERIFY  verify artifact signatures, fail-closed (default: on; set
                0/false/no/off to disable)
   ZPKG_TRUSTED_KEYS
-               who may vouch for a bottle: "name:KEY" entries, whitespace
+               who may vouch for an artifact: "name:KEY" entries, whitespace
                separated, REPLACING the built-in go-zpkg key
   ZPKG_EXTRA_TRUSTED_KEYS
                the same, ADDED to it — usually what you want, since
                replacing the list by hand is how the entry that made
                everything work gets dropped
   ZPKG_TRUST_THRESHOLD
-               how many DISTINCT trusted keys must have signed a bottle
+               how many DISTINCT trusted keys must have signed an artifact
                (default: 1). Two builders who build the same inputs get the
-               same bottle — that is the point — so what tells them apart is
+               same artifact — that is the point — so what tells them apart is
                who signed it. Set 2 to install nothing that a second builder
                did not independently reproduce. Each key counts once, and a
                signature by a key outside the set is ignored, not an error.
@@ -214,35 +214,35 @@ var tool = "zpkgx"
 // from anything I had edited.
 func pfx() string { return tool + ": " }
 
-// bottleWarn routes the backend's diagnostics to stderr under the right name.
+// artifactWarn routes the backend's diagnostics to stderr under the right name.
 //
 // A closure the resolver could not complete is not an error there — it is an
 // error MUCH later, when the program starts and reports "cannot open shared
-// object file". Print those; bottle stays silent by default.
-func bottleWarn() {
-	bottle.Warn = func(msg string) { fmt.Fprintln(os.Stderr, pfx()+msg) }
+// object file". Print those; artifact stays silent by default.
+func artifactWarn() {
+	artifact.Warn = func(msg string) { fmt.Fprintln(os.Stderr, pfx()+msg) }
 }
 
 // configError reports a load/parse failure of ~/.zpkg/config.hcl2, if any. It
 // is a var so tests can drive the startup-warning path.
-var configError = bottle.ConfigError
+var configError = artifact.ConfigError
 
 // setupRootfs poses the zpkgx loader at the canonical PT_INTERP path; a var so a
 // test can observe the call without writing to the host's /lib.
-var setupRootfs = bottle.SetupScratchRootfs
+var setupRootfs = artifact.SetupScratchRootfs
 
 // companionsFor and pickVersionFor are the two questions addCompanions asks of
 // the pantry and the registry; vars so a test can answer them without a
 // network.
-var companionsFor = bottle.CompanionsFor
-var pickVersionFor = bottle.PickVersionFor
+var companionsFor = artifact.CompanionsFor
+var pickVersionFor = artifact.PickVersionFor
 
 // run is the testable entry point; it returns the process exit code.
 func run(argv []string) int {
 	// A closure the resolver could not complete is not an error here — it is an
 	// error MUCH later, when the program starts and reports "cannot open shared
-	// object file". Print those diagnostics; bottle stays silent by default.
-	bottleWarn()
+	// object file". Print those diagnostics; artifact stays silent by default.
+	artifactWarn()
 	if err := configError(); err != nil {
 		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.zpkg/config.hcl2: "+err.Error())
 	}
@@ -540,7 +540,7 @@ func splitPlatform(format outputFormat, argv []string) (osn, arch string, rest [
 // exactly the place this matters — a script that reads the tree. And a
 // refusal rather than resolving FROM the catalogue, because the two answer
 // different questions: a catalogue records what is PUBLISHED, while this
-// resolves what WOULD satisfy a constraint, including versions no bottle
+// resolves what WOULD satisfy a constraint, including versions no artifact
 // carries. `--platform` keeps both, which is why it is what the message names.
 func graphCatalogClash(format outputFormat, catalog string) error {
 	if format != formatGraph || catalog == "" {
@@ -582,7 +582,7 @@ func splitPlus(argv []string) (plus, rest []string) {
 // the host, and they are ignored by every other format — splitPlatform
 // refuses the flag there rather than letting it pass without effect.
 func exec(plus, rest []string, format outputFormat, graphOS, graphArch string, stdout io.Writer) error {
-	dir := bottle.Dir()
+	dir := artifact.Dir()
 
 	// The set of packages to materialise, and the program to run.
 	roots := map[string]string{}
@@ -632,16 +632,16 @@ func exec(plus, rest []string, format outputFormat, graphOS, graphArch string, s
 	// and worth asking about a closure that will not resolve at all.
 	if format == formatGraph {
 		if graphOS == "" {
-			graphOS, graphArch = bottle.HostSlug()
+			graphOS, graphArch = artifact.HostSlug()
 		}
 		return printGraph(roots, graphOS, graphArch, stdout)
 	}
 
-	closure, err := bottle.CompleteClosure(roots, dir)
+	closure, err := artifact.CompleteClosure(roots, dir)
 	if err != nil {
 		return err
 	}
-	libPath := bottle.LibPath(closure, dir)
+	libPath := artifact.LibPath(closure, dir)
 
 	// `zpkgx +a +b` with no command prints the environment those packages bring,
 	// for `eval "$(zpkgx +a +b)"` — the contract bk's generated build script
@@ -652,8 +652,8 @@ func exec(plus, rest []string, format outputFormat, graphOS, graphArch string, s
 		// after `eval "$(zpkgx +deps)"`), so the loader has to be in place first:
 		// on a FROM-scratch image there is no /lib/ld-linux-* until we pose the
 		// zpkgx glibc one. Best-effort — on a normal host it is already there.
-		if bottle.GOOS() == "linux" {
-			if loader := bottle.FindLoader(dir); loader != "" {
+		if artifact.GOOS() == "linux" {
+			if loader := artifact.FindLoader(dir); loader != "" {
 				setupRootfs(loader, "")
 			}
 		}
@@ -664,7 +664,7 @@ func exec(plus, rest []string, format outputFormat, graphOS, graphArch string, s
 	// all the packages the user brought in with +pkg.
 	var binDirs []string
 	for p := range roots {
-		binDirs = append(binDirs, filepath.Join(bottle.PrefixOf(p, closure, dir), "bin"))
+		binDirs = append(binDirs, filepath.Join(artifact.PrefixOf(p, closure, dir), "bin"))
 	}
 
 	binPath, err := resolveBin(runProject, program, binDirs, closure, dir)
@@ -711,7 +711,7 @@ func exec(plus, rest []string, format outputFormat, graphOS, graphArch string, s
 // defect so quiet: `zpkgx +jq` printed a COMPLETE environment while `zpkgx jq`
 // ran with an incomplete one, so reading the two outputs side by side showed
 // nothing wrong with either.
-func poseThenCompose(closure []bottle.Resolved, dir, libPath string) []string {
+func poseThenCompose(closure []artifact.Resolved, dir, libPath string) []string {
 	if posesLoader() {
 		if loader := findLoader(dir); loader != "" {
 			setupRootfs(loader, "")
@@ -727,12 +727,12 @@ func poseThenCompose(closure []bottle.Resolved, dir, libPath string) []string {
 // Written as one because the first version of that test skipped on darwin —
 // which is this machine — so the assertion that mattered ran nowhere I could
 // see it, and a skipped test is not a test.
-var posesLoader = func() bool { return bottle.GOOS() == "linux" }
+var posesLoader = func() bool { return artifact.GOOS() == "linux" }
 
 // findLoader locates the pkgx glibc loader in an installed closure.
 //
 // A seam for the same reason as posesLoader, and discovered the same way.
-// bottle.LoaderName() is EMPTY on the architectures that have no canonical
+// artifact.LoaderName() is EMPTY on the architectures that have no canonical
 // ld-linux name of their own — riscv64, ppc64le and loong64 among them — so a
 // test that built its fixture from it created no loader there and asserted on
 // a step that never ran. The qemu lanes caught it:
@@ -742,7 +742,7 @@ var posesLoader = func() bool { return bottle.GOOS() == "linux" }
 //
 // which is also the fact worth stating: on those architectures zpkgx poses
 // nothing, and the ordering this file exists for is a no-op.
-var findLoader = bottle.FindLoader
+var findLoader = artifact.FindLoader
 
 // runEnv builds the child environment.
 //
@@ -759,17 +759,17 @@ var findLoader = bottle.FindLoader
 //	$ DYLD_LIBRARY_PATH=$PWD/lib ./prog
 //	42
 //
-// So on darwin a bottle's own rpaths are the ONLY mechanism: there is no
+// So on darwin an artifact's own rpaths are the ONLY mechanism: there is no
 // environment fallback behind them. That is why an unresolvable @rpath there
 // is fatal rather than merely untidy, and why go-zpkg/bk#125 had to repair the
-// bottles instead of widening a search path. Setting DYLD_LIBRARY_PATH would
+// artifacts instead of widening a search path. Setting DYLD_LIBRARY_PATH would
 // paper over exactly the defect that campaign exists to find, and SIP strips
 // DYLD_* when exec'ing a protected binary in any case.
 //
 // On WINDOWS there is no LD_LIBRARY_PATH either: the loader resolves DLLs from
 // the exe's own directory and from PATH, so PATH must carry BOTH the bin and
 // lib dirs, joined with the OS-native list separator (";", not ":").
-func runEnv(closure []bottle.Resolved, dir, libPath string) []string {
+func runEnv(closure []artifact.Resolved, dir, libPath string) []string {
 	env := os.Environ()
 	for _, e := range composeEnv(closure, dir).Env {
 		switch {
@@ -783,12 +783,12 @@ func runEnv(closure []bottle.Resolved, dir, libPath string) []string {
 			env = setEnv(env, e.Name, expandEnv(e.Value, env))
 		}
 	}
-	if bottle.GOOS() == "windows" {
+	if artifact.GOOS() == "windows" {
 		// Windows has no LD_LIBRARY_PATH: the loader resolves DLLs from the exe's
 		// own directory and from PATH, so the lib dirs have to travel on PATH,
 		// joined with the OS-native separator.
 		sep := string(os.PathListSeparator)
-		env = setEnv(env, "PATH", strings.Join(bottle.LibDirs(closure, dir), sep)+sep+getEnv(env, "PATH"))
+		env = setEnv(env, "PATH", strings.Join(artifact.LibDirs(closure, dir), sep)+sep+getEnv(env, "PATH"))
 	}
 	return env
 }
@@ -800,7 +800,7 @@ func runEnv(closure []bottle.Resolved, dir, libPath string) []string {
 //
 //	PERL5LIB: "{{prefix}}/lib/perl5:$PERL5LIB"
 //
-// and bottle keeps that `$PERL5LIB` verbatim, because the SHELL expands it in
+// and artifact keeps that `$PERL5LIB` verbatim, because the SHELL expands it in
 // `eval "$(zpkgx +…)"`. There is no shell in the run form: exec hands the block
 // to the program as it stands, so an unexpanded value arrives as the literal
 // characters `$PERL5LIB` on the end of a path list. Measured on yt-dlp, whose
@@ -884,7 +884,7 @@ func setEnv(env []string, name, value string) []string {
 // the project is not there, which leaves BinNames verbatim — the same answer as
 // before, for a case that cannot arise here since the closure is what put the
 // prefix on disk.
-func versionOf(project string, closure []bottle.Resolved) string {
+func versionOf(project string, closure []artifact.Resolved) string {
 	for _, r := range closure {
 		if r.Project == project {
 			return r.Version.Raw
@@ -924,9 +924,9 @@ func projectOf(spec string) string { return project(spec) }
 
 // resolveBin finds the absolute path of the binary to exec: a project's primary
 // program (runProject set), or a named program looked up across binDirs. The
-// result is passed through bottle.ResolveBinPath so a Windows lookup lands on
+// result is passed through artifact.ResolveBinPath so a Windows lookup lands on
 // the ".exe" image.
-func resolveBin(runProject, program string, binDirs []string, closure []bottle.Resolved, dir string) (string, error) {
+func resolveBin(runProject, program string, binDirs []string, closure []artifact.Resolved, dir string) (string, error) {
 	// ⛔ THE WORD THE USER TYPED WINS OVER THE PROJECT'S PRIMARY BINARY.
 	//
 	// `zpkgx ls --version` resolves the COMMAND ls to gnu.org/coreutils, and
@@ -942,8 +942,8 @@ func resolveBin(runProject, program string, binDirs []string, closure []bottle.R
 	// reached this path at all. Splitting `zpkgs` out gave the word back to
 	// the registry and uncovered it.
 	if runProject != "" && program != "" {
-		prefix := bottle.PrefixOf(runProject, closure, dir)
-		cand := bottle.ResolveBinPath(filepath.Join(prefix, "bin", program))
+		prefix := artifact.PrefixOf(runProject, closure, dir)
+		cand := artifact.ResolveBinPath(filepath.Join(prefix, "bin", program))
 		if _, err := os.Stat(cand); err == nil {
 			return cand, nil
 		}
@@ -954,31 +954,31 @@ func resolveBin(runProject, program string, binDirs []string, closure []bottle.R
 		// answer, because the next step reports what it could not run.
 	}
 	if runProject != "" {
-		_, provides, err := bottle.FetchMeta(runProject)
+		_, provides, err := artifact.FetchMeta(runProject)
 		if err != nil {
 			return "", err
 		}
-		prefix := bottle.PrefixOf(runProject, closure, dir)
+		prefix := artifact.PrefixOf(runProject, closure, dir)
 		// The version, because a recipe may name its binary after it —
 		// apache.org/apr-util provides only `bin/apu-{{ version.major }}-config`,
 		// and without the version that name is looked up with the moustache
-		// still in it. go-zpkg/bottle#75 taught BinNames to expand; this is the
+		// still in it. go-zpkg/artifact#75 taught BinNames to expand; this is the
 		// caller that has the version to expand WITH.
-		return bottle.ResolveBinPath(filepath.Join(prefix, "bin",
-			bottle.PrimaryBinFor(runProject, provides, versionOf(runProject, closure)))), nil
+		return artifact.ResolveBinPath(filepath.Join(prefix, "bin",
+			artifact.PrimaryBinFor(runProject, provides, versionOf(runProject, closure)))), nil
 	}
 	// An explicit path runs as itself — `zpkgx +gnu.org/glibc -- /usr/local/bin/bk`
 	// brings the packages into the environment for a program that is NOT one of
 	// them, which is how a tool gets a runtime on a FROM-scratch image.
 	if strings.ContainsRune(program, os.PathSeparator) {
-		cand := bottle.ResolveBinPath(program)
+		cand := artifact.ResolveBinPath(program)
 		if _, err := os.Stat(cand); err != nil {
 			return "", fmt.Errorf("not executable: %s", program)
 		}
 		return cand, nil
 	}
 	for _, d := range binDirs {
-		cand := bottle.ResolveBinPath(filepath.Join(d, program))
+		cand := artifact.ResolveBinPath(filepath.Join(d, program))
 		if _, err := os.Stat(cand); err == nil {
 			return cand, nil
 		}
@@ -992,16 +992,16 @@ func resolveBin(runProject, program string, binDirs []string, closure []bottle.R
 // binary is exec'd directly (Windows resolves its DLLs from the exe dir + PATH,
 // which runEnv has already populated).
 func runELF(binPath string, args, env []string, libPath, dir string) error {
-	if bottle.GOOS() == "linux" {
-		if loader := bottle.FindLoader(dir); loader != "" {
-			bottle.SetupScratchRootfs(loader, "")
-			if !bottle.CanonicalLoaderExists() && bottle.IsELF(binPath) {
+	if artifact.GOOS() == "linux" {
+		if loader := artifact.FindLoader(dir); loader != "" {
+			artifact.SetupScratchRootfs(loader, "")
+			if !artifact.CanonicalLoaderExists() && artifact.IsELF(binPath) {
 				argv := append([]string{loader, "--library-path", libPath, binPath}, args...)
-				return bottle.Exec(loader, argv, env)
+				return artifact.Exec(loader, argv, env)
 			}
 		}
 	}
-	return bottle.Exec(binPath, append([]string{binPath}, args...), env)
+	return artifact.Exec(binPath, append([]string{binPath}, args...), env)
 }
 
 // --- zpkgspec parsing (project[@constraint] | project<op>version) -----------
@@ -1016,21 +1016,21 @@ func runELF(binPath string, args, env []string, libPath, dir string) error {
 const verDelims = "@^~<>="
 
 // splitSpec cuts a zpkgspec into its project and its constraint. The constraint
-// keeps its operator ("^6", ">=6") because that is what bottle's version
+// keeps its operator ("^6", ">=6") because that is what artifact's version
 // matcher consumes; the "@" form carries no operator, so it is dropped. A spec
 // with no constraint matches any version ("*").
-// ⛔ A BUILD HASH IS CUT OFF FIRST, AND IT IS bottle's PARSER THAT CUTS IT.
+// ⛔ A BUILD HASH IS CUT OFF FIRST, AND IT IS artifact's PARSER THAT CUTS IT.
 // `fftw.org@3.3.11/7k2mq4` names one BUILD of a version. Without this the
 // slash stays in the constraint, which then resolves to nothing and reports
 // "no version 3.3.11/7k2mq4" — a message that sends its reader to look for a
 // version that was never meant.
 //
-// The rule is bottle.ParseBuildRef's and is not restated here: a hash may
+// The rule is artifact.ParseBuildRef's and is not restated here: a hash may
 // only follow an `@version`, because a third of the pantry has a slash in its
 // project name and a trailing component cannot be told from a hash by its
 // shape. See buildHashOf for what is done with it.
 func splitSpec(s string) (project, constraint string) {
-	s, _ = bottle.ParseBuildRef(s)
+	s, _ = artifact.ParseBuildRef(s)
 	i := strings.IndexAny(s, verDelims)
 	if i <= 0 {
 		return s, "*"
@@ -1048,7 +1048,7 @@ func splitSpec(s string) (project, constraint string) {
 // of that version's builds — two questions, and folding the second into the
 // constraint is what produced the misleading refusal above.
 func buildHashOf(spec string) string {
-	_, h := bottle.ParseBuildRef(spec)
+	_, h := artifact.ParseBuildRef(spec)
 	return h
 }
 
@@ -1101,7 +1101,7 @@ type envVar struct {
 // reads, or a modulefile an HPC site can install. It covers the WHOLE closure
 // (dependencies included), so a compiler invoked afterwards finds every
 // dependency's headers, libraries and pkg-config files.
-func envMode(closure []bottle.Resolved, dir string, format outputFormat, stdout io.Writer) error {
+func envMode(closure []artifact.Resolved, dir string, format outputFormat, stdout io.Writer) error {
 	c := composeEnv(closure, dir)
 	switch format {
 	case formatJSON:
@@ -1128,15 +1128,15 @@ func envMode(closure []bottle.Resolved, dir string, format outputFormat, stdout 
 
 // composeEnv computes what the closure contributes.
 //
-// Note lib64: a bottle built on x86-64 may install its libraries and .pc files
+// Note lib64: an artifact built on x86-64 may install its libraries and .pc files
 // under lib64 rather than lib. Upstream zpkgx only exports lib/pkgconfig, which
 // is why a linux/x86-64 build of wget could not find openssl through
 // pkg-config. Both are exported here.
-func composeEnv(closure []bottle.Resolved, dir string) composed {
+func composeEnv(closure []artifact.Resolved, dir string) composed {
 	var c composed
 	var bin, ld, lib, cpath, pc, xdg, aclocal, cmake []string
 	for _, r := range closure {
-		p := bottle.PrefixOf(r.Project, closure, dir)
+		p := artifact.PrefixOf(r.Project, closure, dir)
 		c.Closure = append(c.Closure, pkgRef{Project: r.Project, Version: r.Version.Raw, Prefix: p})
 		// CMake's find_package searches <prefix>/{include,lib,…} for every entry
 		// of CMAKE_PREFIX_PATH. CPATH and LIBRARY_PATH mean nothing to it, so a
@@ -1146,7 +1146,7 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 		// a FROM-scratch builder, where there is no system zlib to fall back on.
 		addDir(&cmake, p)
 		addDir(&bin, filepath.Join(p, "bin"))
-		// sbin too: a bottle puts its system tools there, and a recipe that calls
+		// sbin too: an artifact puts its system tools there, and a recipe that calls
 		// one gets a bare "command not found" (exit 127) with nothing naming the
 		// missing binary. gnu.org/glibc ships sbin/ldconfig, which nlnetlabs.nl/ldns
 		// invokes at install time — measured, in a FROM-scratch builder where there
@@ -1169,19 +1169,19 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 		//
 		// which is what blocked x.org/exts and x.org/x11 on darwin, and through
 		// them tcl, cairo, libxml2 and p11-kit. bk already relocates these files
-		// when it bottles them (fixup rewrites share/pkgconfig and lib/pkgconfig
-		// alike), so they were correct in the bottle and unreachable from it.
+		// when it artifacts them (fixup rewrites share/pkgconfig and lib/pkgconfig
+		// alike), so they were correct in the artifact and unreachable from it.
 		addDir(&pc, filepath.Join(p, "share", "pkgconfig"))
 		// A libc's headers must NEVER travel on CPATH. CPATH applies to every
-		// compiler invocation, so a bottle glibc's headers reach compilers that
+		// compiler invocation, so an artifact glibc's headers reach compilers that
 		// are using the HOST's libc — and two glibc header sets in one
 		// translation unit conflict outright:
 		//   glibc/v2.44.0/include/bits/stdint-uintn.h:27: error: conflicting
 		//   types for 'uint64_t'
 		// which is how the kernel's host tools failed. A compiler that should use
-		// a bottle libc is told so with --sysroot and -isystem, at the right
+		// an artifact libc is told so with --sysroot and -isystem, at the right
 		// priority; the library path is unaffected and stays below.
-		if r.Project != bottle.GlibcProject {
+		if r.Project != artifact.GlibcProject {
 			addDir(&cpath, filepath.Join(p, "include"))
 		}
 		addDir(&xdg, filepath.Join(p, "share"))
@@ -1190,7 +1190,7 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 	// glibc's VERSIONED lib dir goes on LD_LIBRARY_PATH only when the loader
 	// that will use it is OURS.
 	//
-	// The bottle puts libc.so.6 in `lib/glibc-2.44/`, and `lib/` holds nothing
+	// The artifact puts libc.so.6 in `lib/glibc-2.44/`, and `lib/` holds nothing
 	// else, so `<prefix>/lib` alone exports a directory with no shared object
 	// in it. In a FROM-scratch tree that is fatal — there is no system libc
 	// behind it, and go-zpkg/bk#272 was every sovereign build dying on its
@@ -1205,7 +1205,7 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 	//	__pointer_chk_guard, version GLIBC_PRIVATE
 	//
 	// which took the s390x seed lane down. `zpkgx -- cmd` never had the problem
-	// because it hands bottle.LibPath to OUR loader as --library-path and runs
+	// because it hands artifact.LibPath to OUR loader as --library-path and runs
 	// both halves from the same build; only the exported environment can pair
 	// them wrongly.
 	//
@@ -1241,7 +1241,7 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 	// pair two halves of different glibcs — the mismatch the note above
 	// describes, arriving at the link instead of at the first `mkdir`.
 	if loaderIsOurs(dir) {
-		for _, d := range bottle.LibDirs(closure, dir) {
+		for _, d := range artifact.LibDirs(closure, dir) {
 			addDir(&ld, d)
 			addDir(&lib, d)
 		}
@@ -1279,10 +1279,10 @@ func composeEnv(closure []bottle.Resolved, dir string) composed {
 		// rust-lang.org/cargo sets
 		//   CARGO_HTTP_CAINFO: ${{deps.curl.se/ca-certs.prefix}}/ssl/cert.pem
 		// and without the closure cargo built with no CA bundle at all.
-		env, err := bottle.FetchRuntimeEnvIn(r.Project, closure, dir)
+		env, err := artifact.FetchRuntimeEnvIn(r.Project, closure, dir)
 		if err != nil {
-			if bottle.Warn != nil {
-				bottle.Warn(fmt.Sprintf("cannot read %s's runtime env: %v", r.Project, err))
+			if artifact.Warn != nil {
+				artifact.Warn(fmt.Sprintf("cannot read %s's runtime env: %v", r.Project, err))
 			}
 			continue
 		}
@@ -1306,12 +1306,12 @@ func sortedKeys(m map[string]string) []string {
 
 // addDir appends a directory to a list if it exists and is not already there.
 // loaderIsOurs reports whether the ELF loader at its canonical path is the one
-// from a bottle under dir — the test for "this process tree runs on OUR glibc".
+// from an artifact under dir — the test for "this process tree runs on OUR glibc".
 //
 // A seam, because a test cannot pose a file at /lib64 and the branch it guards
 // is the one that took a lane down.
 var loaderIsOurs = func(dir string) bool {
-	name := bottle.LoaderName()
+	name := artifact.LoaderName()
 	if name == "" || dir == "" {
 		return false
 	}
@@ -1422,7 +1422,7 @@ func writeModulefile(c composed, stdout io.Writer) error {
 // separate rust-lang.org/cargo project it names in `companions:`. A recipe that
 // declares rust-lang.org and then runs `cargo` is correct against upstream zpkgx
 // and used to die here with `"cargo": executable file not found in $PATH`
-// (go-zpkg/bottle#65). 74 of the pantry's 1899 recipes declare the key.
+// (go-zpkg/artifact#65). 74 of the pantry's 1899 recipes declare the key.
 //
 // NAMED roots only, deliberately. Following companions of the whole resolved
 // closure would widen every environment by whatever its transitive dependencies
@@ -1431,11 +1431,11 @@ func writeModulefile(c composed, stdout io.Writer) error {
 // the loop.
 //
 // Two failures, treated differently on purpose, because conflating them is the
-// defect this fixes. A companion with no bottle for this platform is an ANSWER
+// defect this fixes. A companion with no artifact for this platform is an ANSWER
 // — we looked, there is nothing to install — and is skipped in silence. Failing
 // to READ the recipe is not an answer, and says so.
 func addCompanions(roots map[string]string) {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	named := make([]string, 0, len(roots))
 	for p := range roots {
 		named = append(named, p)
@@ -1452,7 +1452,7 @@ func addCompanions(roots map[string]string) {
 		}
 		comps, err := companionsFor(p, osn, arch)
 		if err != nil {
-			bottle.Warn(fmt.Sprintf("could not read %s's companions: %v", p, err))
+			artifact.Warn(fmt.Sprintf("could not read %s's companions: %v", p, err))
 			continue
 		}
 		for c, want := range comps {
@@ -1471,20 +1471,20 @@ func addCompanions(roots map[string]string) {
 // environment. It is the module front-end's one entry into the resolver, so
 // `zpkge load` and `eval "$(zpkgx +…)"` cannot disagree about a closure.
 func composeSpecs(specs []string) (composed, error) {
-	dir := bottle.Dir()
+	dir := artifact.Dir()
 	envs := currentEnvironments()
 	roots := map[string]string{}
 	for _, p := range expandSpecs(specs, envs) {
 		roots[project(p)] = constraint(p)
 	}
 	addCompanions(roots)
-	closure, err := bottle.CompleteClosure(roots, dir)
+	closure, err := artifact.CompleteClosure(roots, dir)
 	if err != nil {
 		return composed{}, err
 	}
 	c := composeEnv(closure, dir)
 	// Then whatever an IMPORTED environment carries, after the packages, so a
-	// site's own tree wins over a bottle's — which is what a site means by
+	// site's own tree wins over an artifact's — which is what a site means by
 	// putting it in a modulefile.
 	for _, spec := range specs {
 		e, ok := envs[spec]
@@ -1521,7 +1521,7 @@ func sortedMapListKeys(m map[string][]string) []string {
 // read rather than pretending it was never declared.
 func currentEnvironments() map[string]environment {
 	home, _ := os.UserHomeDir()
-	return loadEnvironments(environmentDirs(bottle.Dir(), home), func(msg string) {
+	return loadEnvironments(environmentDirs(artifact.Dir(), home), func(msg string) {
 		fmt.Fprintln(os.Stderr, "zpkgx: "+msg)
 	})
 }

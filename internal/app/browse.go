@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // Browsing the tree, and completing into it.
@@ -66,7 +66,7 @@ import (
 //
 // That is the whole contract, and it is the one thing completion needs: a
 // TAB spawns a fresh process, so anything this function does is paid again
-// on every press. It used to pull the catalogue bottle from the registry
+// on every press. It used to pull the catalogue artifact from the registry
 // here — an OCI token and the whole catalogue (470 KB as measured
 // 2026-10-11, and it was ~200 KB when this comment was written), per press,
 // never reused — which is a
@@ -85,20 +85,20 @@ import (
 //
 // Absent is not an error: it is every fresh machine, and the caller falls
 // back to what is installed.
-var catalogFor = func() (bottle.Catalog, error) {
+var catalogFor = func() (artifact.Catalog, error) {
 	if p := os.Getenv("ZPKG_CATALOG"); p != "" {
 		b, err := osReadFile(p)
 		if err != nil {
-			return bottle.Catalog{}, err
+			return artifact.Catalog{}, err
 		}
-		return bottle.UnmarshalCatalog(b)
+		return artifact.UnmarshalCatalog(b)
 	}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	b, err := osReadFile(catalogPath(osn, arch))
 	if err != nil {
-		return bottle.Catalog{}, err
+		return artifact.Catalog{}, err
 	}
-	return bottle.UnmarshalCatalog(b)
+	return artifact.UnmarshalCatalog(b)
 }
 
 // installedCatalog is what this machine HAS, read from the store.
@@ -111,8 +111,8 @@ var catalogFor = func() (bottle.Catalog, error) {
 // A project directory is one that holds `v<something>` children; everything
 // above it is a namespace. That rule is what makes `gnu.org` an interior
 // node and `gnu.org/bash` a leaf without a list of either.
-func installedCatalog(dir string) bottle.Catalog {
-	cat := bottle.Catalog{Generated: time.Unix(0, 0).UTC().Format(time.RFC3339)}
+func installedCatalog(dir string) artifact.Catalog {
+	cat := artifact.Catalog{Generated: time.Unix(0, 0).UTC().Format(time.RFC3339)}
 	seen := map[string][]string{}
 	var walk func(rel string, depth int)
 	walk = func(rel string, depth int) {
@@ -149,10 +149,10 @@ func installedCatalog(dir string) bottle.Catalog {
 		}
 	}
 	walk("", 0)
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	for proj, vers := range seen {
 		sort.Sort(sort.Reverse(sort.StringSlice(vers)))
-		cat.Projects = append(cat.Projects, bottle.CatalogProject{
+		cat.Projects = append(cat.Projects, artifact.CatalogProject{
 			Project: proj, Versions: vers, Platforms: []string{osn + "/" + arch},
 		})
 	}
@@ -167,7 +167,7 @@ func installedCatalog(dir string) bottle.Catalog {
 // from two sources with different truth — one of them a cache of unknown age
 // — and `zpkgx ls` would have no honest header to print. Which one answered
 // is returned, so the caller can say.
-func browseCatalog(dir string) (bottle.Catalog, string, error) {
+func browseCatalog(dir string) (artifact.Catalog, string, error) {
 	named := os.Getenv("ZPKG_CATALOG")
 	c, err := catalogFor()
 	if err != nil && named != "" {
@@ -176,7 +176,7 @@ func browseCatalog(dir string) (bottle.Catalog, string, error) {
 		// the file they pointed at with facts from the local store, under
 		// a header blaming "the registry" — three wrongs in one line, and
 		// the comment above catalogFor promised otherwise.
-		return bottle.Catalog{}, named, err
+		return artifact.Catalog{}, named, err
 	}
 	if err == nil && len(c.Projects) > 0 {
 		// Which one, exactly. A header that said "registry" over a
@@ -187,7 +187,7 @@ func browseCatalog(dir string) (bottle.Catalog, string, error) {
 		if named != "" {
 			return c, named, nil
 		}
-		osn, arch := bottle.HostSlug()
+		osn, arch := artifact.HostSlug()
 		return c, catalogPath(osn, arch), nil
 	}
 	return installedCatalog(dir), "installed", nil
@@ -236,7 +236,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, pfx()+"--dependents needs a project: "+tool+" ls --dependents openssl.org")
 		return 2
 	}
-	cat, src, err := browseCatalog(bottle.Dir())
+	cat, src, err := browseCatalog(artifact.Dir())
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"ZPKG_CATALOG names %s and it cannot be read: %v\n", src, err)
 		return 2
@@ -253,7 +253,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 		case catalogAbsent():
 			fmt.Fprintln(stderr, pfx()+"showing what is INSTALLED — no catalogue yet; run: "+tool+" catalog update")
 		default:
-			osn, arch := bottle.HostSlug()
+			osn, arch := artifact.HostSlug()
 			fmt.Fprintf(stderr, pfx()+"showing what is INSTALLED — %s could not be read\n", catalogPath(osn, arch))
 		}
 	}
@@ -272,7 +272,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 		if !*tree {
 			d = 1
 		}
-		var sub []bottle.DepNode
+		var sub []artifact.DepNode
 		if *dependents {
 			sub = cat.Dependents(node, d)
 			if len(sub) == 0 {
@@ -295,7 +295,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 			// once by the factory and is in nobody's closure. Said here
 			// rather than only in the docs, because the number is read
 			// where it is printed.
-			osn, arch := bottle.HostSlug()
+			osn, arch := artifact.HostSlug()
 			fmt.Fprintf(stdout, "\nruntime dependents on %s/%s; a build-only user is in no catalogue\n", osn, arch)
 			return 0
 		}
@@ -330,7 +330,7 @@ func runLs(args []string, stdout, stderr io.Writer) int {
 }
 
 // printDepTree draws the subtree the way `zpkgx --graph` already draws one.
-func printDepTree(w io.Writer, ns []bottle.DepNode, level int, swept bool) {
+func printDepTree(w io.Writer, ns []artifact.DepNode, level int, swept bool) {
 	for _, n := range ns {
 		note := ""
 		switch {
@@ -345,10 +345,10 @@ func printDepTree(w io.Writer, ns []bottle.DepNode, level int, swept bool) {
 			note = "  " + n.Version
 		case swept:
 			// In a TREE this is the most useful line on the page: a
-			// dependency with no bottle for this platform is the reason
+			// dependency with no artifact for this platform is the reason
 			// the thing above it cannot be installed, and it would
 			// otherwise print as a bare name among satisfied ones.
-			note = "  (" + noBottle + ")"
+			note = "  (" + noArtifact + ")"
 		}
 		// Not on a repeat: the node it repeats already carries the mark,
 		// and a second one reads as a second copy in the store.
@@ -360,12 +360,12 @@ func printDepTree(w io.Writer, ns []bottle.DepNode, level int, swept bool) {
 	}
 }
 
-func versionNote(cat bottle.Catalog, p bottle.CatalogProject) string {
+func versionNote(cat artifact.Catalog, p artifact.CatalogProject) string {
 	switch {
 	case len(p.Versions) > 0:
 		return " — " + strings.Join(p.Versions, " ") + haveNote(p.Project, p.Versions[0])
 	case knowsVersions(cat):
-		return " — " + noBottle + haveNote(p.Project, "")
+		return " — " + noArtifact + haveNote(p.Project, "")
 	}
 	return haveNote(p.Project, "")
 }
@@ -387,7 +387,7 @@ func versionNote(cat bottle.Catalog, p bottle.CatalogProject) string {
 // of a store with hundreds of packages is the kind of cost that only shows
 // up on somebody else's machine.
 func haveNote(project, offered string) string {
-	have := installedVersions(project, bottle.Dir())
+	have := installedVersions(project, artifact.Dir())
 	if len(have) == 0 {
 		return ""
 	}
@@ -399,33 +399,33 @@ func haveNote(project, offered string) string {
 
 // installedVersions is a seam: a test must not need a populated store, and
 // the empty branch must be reachable from one that is.
-var installedVersions = bottle.InstalledVersions
+var installedVersions = artifact.InstalledVersions
 
-// noBottle is what a project with nothing published for this platform says.
+// noArtifact is what a project with nothing published for this platform says.
 //
 // Named, and marked. A catalogue is published PER PLATFORM because what is
 // available differs by architecture — the s390x lane has a fraction of what
 // linux/x86-64 has — and the choice here is deliberately not to hide the
 // rest: somebody looking for doxygen.nl should learn that it exists and has
-// no bottle for them, which tells them to go and build it. Dropping the
+// no artifact for them, which tells them to go and build it. Dropping the
 // name would tell them it does not exist, which is false and sends them
 // nowhere.
-const noBottle = "no bottle here"
+const noArtifact = "no artifact here"
 
 // knowsVersions reports whether this catalogue was built with the registry
 // sweep, i.e. whether an empty version list MEANS anything.
 //
 // `bk catalog` without --versions names projects and nothing else, and on
-// such a catalogue every line would otherwise read "no bottle here" — which
+// such a catalogue every line would otherwise read "no artifact here" — which
 // would be a statement about the catalogue dressed up as a statement about
 // the registry. There is no flag to read, so this reads the only evidence
 // there is: a swept catalogue has versions SOMEWHERE.
 //
 // One case it gets wrong, and it is the benign direction: a swept catalogue
 // for a platform that carries NOTHING looks unswept, and a reader is told
-// "a package" rather than "no bottle here". That is a fresh lane, where the
+// "a package" rather than "no artifact here". That is a fresh lane, where the
 // weaker answer is still true.
-func knowsVersions(cat bottle.Catalog) bool {
+func knowsVersions(cat artifact.Catalog) bool {
 	for _, p := range cat.Projects {
 		if len(p.Versions) > 0 {
 			return true
@@ -436,7 +436,7 @@ func knowsVersions(cat bottle.Catalog) bool {
 
 // lsNote says what a node is in the fewest words that distinguish the cases
 // — a package, a namespace, both, and a package with nothing here for you.
-func lsNote(cat bottle.Catalog, n bottle.Node) string {
+func lsNote(cat artifact.Catalog, n artifact.Node) string {
 	var parts []string
 	if n.Leaf {
 		offered := ""
@@ -445,7 +445,7 @@ func lsNote(cat bottle.Catalog, n bottle.Node) string {
 			offered = p.Versions[0]
 			parts = append(parts, offered)
 		case ok && knowsVersions(cat):
-			parts = append(parts, noBottle)
+			parts = append(parts, noArtifact)
 		default:
 			parts = append(parts, "a package")
 		}
@@ -526,7 +526,7 @@ func completionsFor(word string) []completion {
 	// was 6.3–9.8 ms of every keystroke and the index answers the same
 	// question in 0.08 ms. See nameindex.go for why a second file is safe
 	// here.
-	cat := completionCatalog(bottle.Dir())
+	cat := completionCatalog(artifact.Dir())
 	for _, n := range cat.Complete(bare) {
 		v := n.Name
 		if plus {

@@ -12,7 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // A local record of what did not work.
@@ -21,7 +21,7 @@ import (
 //
 // The useful signal from a package manager is which packages people reach
 // for and do not get: a missing platform, a constraint nothing satisfies, a
-// soname no bottle provides. Upstream package managers collect that by
+// soname no artifact provides. Upstream package managers collect that by
 // phoning home. This does not, and the reason is already written into the
 // command it sits beside — `zpkgs request` prints a report you can open as an
 // issue and says, in its own help, that it *sends nothing*.
@@ -68,7 +68,7 @@ const (
 )
 
 // journalPath is the file, beside the store the rest of the state lives in.
-func journalPath() string { return filepath.Join(bottle.Dir(), "journal.jsonl") }
+func journalPath() string { return filepath.Join(artifact.Dir(), "journal.jsonl") }
 
 // journalEnabled is false when ZPKG_JOURNAL is set to one of the falsey
 // spellings the rest of this program accepts, so a user who wants no local
@@ -91,10 +91,10 @@ func recordFailure(err error) {
 		Kind:    kindFailed,
 		Message: sanitise(err.Error()),
 	}
-	// bottle already knows how to tell "we do not have this" from "this went
+	// artifact already knows how to tell "we do not have this" from "this went
 	// wrong", and exports it for the hint `zpkgs request` prints. Reusing it
 	// means the journal's taxonomy cannot drift from the hint's.
-	if p := bottle.ProjectToRequest(err); p != "" {
+	if p := artifact.ProjectToRequest(err); p != "" {
 		e.Kind, e.Project = kindMissing, sanitise(p)
 	}
 	appendEntry(e)
@@ -105,7 +105,7 @@ func appendEntry(e entry) {
 	if merr != nil {
 		return
 	}
-	dir := bottle.Dir()
+	dir := artifact.Dir()
 	if os.MkdirAll(dir, 0o755) != nil {
 		return
 	}
@@ -161,7 +161,7 @@ func rotate(path string) {
 //
 // ⛔ THE TEXT IS NOT OURS. It is an error string, and error strings here
 // quote project names, versions and sonames read out of a catalogue, a
-// registry index or a downloaded binary. bottle holds the same line for the
+// registry index or a downloaded binary. artifact holds the same line for the
 // catalogue it decodes; this is the same rule at the other end, because what
 // is written now is printed later by `zpkgs journal`.
 func sanitise(s string) string {

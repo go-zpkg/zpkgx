@@ -41,7 +41,7 @@ type environment struct {
 	File        string // where it was declared, for `show`
 
 	// The raw environment operations an IMPORTED modulefile carries. A site's
-	// modulefile points at trees the site installed, not at bottles, so there is
+	// modulefile points at trees the site installed, not at artifacts, so there is
 	// no package to name — `zpkgx env import` converts those statements into
 	// these, once, in front of a person.
 	Prepend  map[string][]string
@@ -79,7 +79,7 @@ func environmentDirs(zpkgxDir, home string) []string {
 		dirs = append(dirs, filepath.Join(zpkgxDir, "environments"))
 	}
 	// ⛔ NOT `~/.pkgx`. This read the retired store's directory long after
-	// bottle.Dir() moved to `~/.zpkg` (bottle/pkgx.go:385), so a user's
+	// artifact.Dir() moved to `~/.zpkg` (artifact/pkgx.go:385), so a user's
 	// environments went in one place and were looked for in another — and on a
 	// machine that had never run upstream pkgx, the path simply did not exist.
 	// `~/.pkgx` is upstream's directory, which is the reason nothing of ours

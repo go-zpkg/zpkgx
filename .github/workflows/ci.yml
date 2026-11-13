@@ -18,7 +18,7 @@ jobs:
   #   GO-2026-6613 stdlib.Close       GO-2026-6608 stdlib.ReadMIMEHeader
   #   GO-2026-6603 stdlib.Write       GO-2026-6607 stdlib.DialContext
   #
-  # Reachable, not merely present: pkgx pulls bottles and catalogues over
+  # Reachable, not merely present: pkgx pulls artifacts and catalogues over
   # HTTP, so those are its own paths.
   #
   # ⛔ AND THE `go` DIRECTIVE IS THE TOOLCHAIN. This lane always pinned
@@ -151,15 +151,15 @@ jobs:
         run: go build -ldflags='-s -w' -o zpkgx-${{ matrix.goos }}-${{ matrix.goarch }} .
 
   # Proof-of-concept: build zpkgx.exe natively on a real Windows runner, fabricate
-  # a tiny Windows pkgx bottle (a PE built by the runner's Go toolchain, laid out
+  # a tiny Windows pkgx artifact (a PE built by the runner's Go toolchain, laid out
   # as <project>/windows/x86-64/{versions.txt,v1.0.0.tar.gz}), serve dist/ over
-  # HTTP, and prove `zpkgx.exe <project>` fetches the bottle, resolves the .exe,
+  # HTTP, and prove `zpkgx.exe <project>` fetches the artifact, resolves the .exe,
   # execs it, and both its output AND its exit code propagate.
   #
-  # NB: pkgx depends on github.com/go-zpkg/bottle via a tagged version; the
-  # windows run-path lives in that module. This job checks out go-zpkg/bottle
-  # alongside and `replace`s it locally, so it goes green once the windows bottle
-  # changes are on bottle's default branch (or a bumped tag pkgx requires).
+  # NB: pkgx depends on github.com/go-zpkg/artifact via a tagged version; the
+  # windows run-path lives in that module. This job checks out go-zpkg/artifact
+  # alongside and `replace`s it locally, so it goes green once the windows artifact
+  # changes are on artifact's default branch (or a bumped tag pkgx requires).
   windows-run:
     runs-on: windows-latest
     env:
@@ -178,7 +178,7 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -o zpkgx.exe .
 
-      - name: Fabricate a tiny windows bottle (hello.exe)
+      - name: Fabricate a tiny windows artifact (hello.exe)
         shell: pwsh
         working-directory: zpkgx
         run: |
@@ -189,12 +189,12 @@ jobs:
           import ("fmt"; "os")
           func main() {
               if len(os.Args) > 1 && os.Args[1] == "fail" { os.Exit(3) }
-              fmt.Println("hello from pkgx bottle (win)")
+              fmt.Println("hello from pkgx artifact (win)")
           }
           '@ | Set-Content hello/hello.go
-          # Native windows PE, the leaf tool of the bottle.
+          # Native windows PE, the leaf tool of the artifact.
           Push-Location hello; go mod init hello.test 2>$null; go build -o hello.exe .; Pop-Location
-          # Bottle tree: <proj>/v<ver>/bin/hello.exe  ->  gzip'd tar.
+          # Artifact tree: <proj>/v<ver>/bin/hello.exe  ->  gzip'd tar.
           $stage = "stage/$proj/v$ver/bin"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item hello/hello.exe "$stage/hello.exe"
@@ -250,8 +250,8 @@ jobs:
           $env:ZPKG_DIST   = "http://127.0.0.1:8199"
           $env:ZPKG_PANTRY = "http://127.0.0.1:8199"
           $env:ZPKG_DIR    = "$PWD\store"
-          # This fixture is a static-HTTP dist of UNSIGNED bottles, and the
-          # install path now enforces the fail-closed signature check (bottle#21),
+          # This fixture is a static-HTTP dist of UNSIGNED artifacts, and the
+          # install path now enforces the fail-closed signature check (artifact#21),
           # so it would refuse every one of them. State the posture explicitly;
           # what this job proves is the Windows exec path, not verification.
           $env:ZPKG_VERIFY = "0"
@@ -259,7 +259,7 @@ jobs:
             # 1. output round-trip
             $out = (& .\zpkgx.exe hello.test 2>&1 | Out-String).Trim()
             Write-Host "zpkgx.exe hello.test => $out"
-            if ($out -notmatch 'hello from pkgx bottle \(win\)') {
+            if ($out -notmatch 'hello from pkgx artifact \(win\)') {
               throw "expected greeting, got: $out"
             }
             # 2. arg passing + exit-code propagation through execWindows

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // The name index: the completion path's catalogue, in the form completion
@@ -53,7 +53,7 @@ import (
 //
 // It carries the project name and the newest version, because that is
 // everything completion shows: the name, its slash if it is a namespace, and
-// the version or "no bottle here" that lsNote builds from `Versions`. It
+// the version or "no artifact here" that lsNote builds from `Versions`. It
 // carries no dependencies, which is why it is 8% of the file.
 
 // nameIndexVersion is the format version in the header. An unknown version is
@@ -67,7 +67,7 @@ const nameIndexMagic = "#zpkgx-names"
 
 // catalogNamesPath is the index beside the catalogue it describes.
 func catalogNamesPath(osn, arch string) string {
-	return filepath.Join(bottle.Dir(), "catalog", osn+"-"+arch+".names")
+	return filepath.Join(artifact.Dir(), "catalog", osn+"-"+arch+".names")
 }
 
 // writeNameIndex writes the index for a catalogue whose JSON is jsonBytes long.
@@ -75,7 +75,7 @@ func catalogNamesPath(osn, arch string) string {
 // Sorted, so the file is stable between runs over the same catalogue: a
 // derived file that changes when its source did not is a file nobody can
 // diff.
-func writeNameIndex(path string, cat bottle.Catalog, jsonBytes int64) error {
+func writeNameIndex(path string, cat artifact.Catalog, jsonBytes int64) error {
 	names := make([]string, 0, len(cat.Projects))
 	vers := make(map[string]string, len(cat.Projects))
 	for _, p := range cat.Projects {
@@ -102,10 +102,10 @@ func writeNameIndex(path string, cat bottle.Catalog, jsonBytes int64) error {
 // this zpkgx does not know, a size or count that disagrees with the JSON beside
 // it. There is no error to report, because the caller's answer to all of them
 // is the same: read the JSON instead.
-func readNameIndex(indexPath, jsonPath string) (bottle.Catalog, bool) {
+func readNameIndex(indexPath, jsonPath string) (artifact.Catalog, bool) {
 	f, err := os.Open(indexPath)
 	if err != nil {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 	defer f.Close()
 	// ⛔ THE SIZE OF THE JSON, NOT OF THE INDEX. The question is whether this
@@ -113,7 +113,7 @@ func readNameIndex(indexPath, jsonPath string) (bottle.Catalog, bool) {
 	// evidence is the catalogue's own size.
 	st, err := osStat(jsonPath)
 	if err != nil {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 	return parseNameIndex(f, st.Size())
 }
@@ -125,22 +125,22 @@ func readNameIndex(indexPath, jsonPath string) (bottle.Catalog, bool) {
 // file on a real filesystem, and an error arm no test can reach is an error arm
 // nobody has checked — this repository's own coverage profile is what pointed
 // at it.
-func parseNameIndex(r io.Reader, jsonBytes int64) (bottle.Catalog, bool) {
+func parseNameIndex(r io.Reader, jsonBytes int64) (artifact.Catalog, bool) {
 	br := bufio.NewReader(r)
 	header, err := br.ReadString('\n')
 	if err != nil {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 	wantBytes, wantCount, ok := parseNameIndexHeader(header)
 	if !ok {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 	// The header has to describe the catalogue that is actually here.
 	if jsonBytes != wantBytes {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 
-	cat := bottle.Catalog{Projects: make([]bottle.CatalogProject, 0, wantCount)}
+	cat := artifact.Catalog{Projects: make([]artifact.CatalogProject, 0, wantCount)}
 	for {
 		line, err := br.ReadString('\n')
 		if line = strings.TrimRight(line, "\n"); line != "" {
@@ -154,18 +154,18 @@ func parseNameIndex(r io.Reader, jsonBytes int64) (bottle.Catalog, bool) {
 			//	../outside	1.0  ✓ 9.9.9
 			//
 			// and the `✓ 9.9.9` is a directory OUTSIDE $ZPKG_DIR, reported as
-			// installed — because lsNote asks bottle.InstalledVersions, which
-			// does filepath.Join(dir, project). bottle.UnmarshalCatalog
+			// installed — because lsNote asks artifact.InstalledVersions, which
+			// does filepath.Join(dir, project). artifact.UnmarshalCatalog
 			// refuses that name outright ("has a `..` segment"); this reader
 			// built a Catalog by hand and so skipped the refusal.
 			//
 			// A fast path that reaches the same data must apply the same
 			// checks: the guard belongs to the DATA, not to whichever reader
 			// got there first.
-			if err := bottle.ValidateProjectName(name); err != nil {
-				return bottle.Catalog{}, false
+			if err := artifact.ValidateProjectName(name); err != nil {
+				return artifact.Catalog{}, false
 			}
-			p := bottle.CatalogProject{Project: name}
+			p := artifact.CatalogProject{Project: name}
 			if ver != "" {
 				p.Versions = []string{ver}
 			}
@@ -175,14 +175,14 @@ func parseNameIndex(r io.Reader, jsonBytes int64) (bottle.Catalog, bool) {
 			if err == io.EOF {
 				break
 			}
-			return bottle.Catalog{}, false
+			return artifact.Catalog{}, false
 		}
 	}
 	// A count that disagrees means a truncated write or a stale pairing, and
 	// a SHORT index is the dangerous direction: completion would quietly stop
 	// offering the projects that fell off the end.
 	if len(cat.Projects) != wantCount {
-		return bottle.Catalog{}, false
+		return artifact.Catalog{}, false
 	}
 	return cat, true
 }
@@ -219,9 +219,9 @@ func parseNameIndexHeader(line string) (jsonBytes int64, count int, ok bool) {
 // file, and there is no index for it — answering from one built beside a
 // different catalogue would be the exact disagreement this file is careful
 // about.
-func completionCatalog(dir string) bottle.Catalog {
+func completionCatalog(dir string) artifact.Catalog {
 	if os.Getenv("ZPKG_CATALOG") == "" {
-		osn, arch := bottle.HostSlug()
+		osn, arch := artifact.HostSlug()
 		if cat, ok := indexFor(catalogNamesPath(osn, arch), catalogPath(osn, arch)); ok {
 			return cat
 		}
@@ -243,7 +243,7 @@ func completionCatalog(dir string) bottle.Catalog {
 // Measured 2026-10-11: TestCompletionCarriesTheMark passed in CI, where there
 // is no ~/.pkgx, and failed on a machine that had run `catalog reindex` —
 // `completionsFor` read the real index instead of the faked catalogue and
-// reported doxygen.nl's real version where the test expected "no bottle
+// reported doxygen.nl's real version where the test expected "no artifact
 // here". Green on a clean machine is the worst way for this to fail.
 //
 // So the index is reachable through a seam of its own, and withCatalog

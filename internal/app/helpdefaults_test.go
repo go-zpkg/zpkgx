@@ -4,17 +4,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // ⛔⛔ A HELP TEXT THAT NAMES A DEFAULT MUST NAME THE DEFAULT.
 //
 // Both usages printed `oci://ghcr.io/go-zpkg/packages` as the ZPKG_DIST
-// default while `bottle.DistBase` was `oci://ghcr.io/go-pkgx/packages`. The
+// default while `artifact.DistBase` was `oci://ghcr.io/go-pkgx/packages`. The
 // go-pkgx → go-zpkg rename rewrote the prose and could not rewrite the
 // constant, because the constant is a deployment fact: GitHub's container
 // packages are org-scoped and did not follow the repository transfer, so
-// every bottle stayed where it was.
+// every artifact stayed where it was.
 //
 // Nothing could see the disagreement. `zpkgx -h` is a string, the resolver
 // reads a var, and the two only meet in a reader who happens to compare them.
@@ -27,9 +27,9 @@ import (
 func TestEveryHelpTextNamesTheRealRegistryDefault(t *testing.T) {
 	// The prose writes the URL as the user would type it into ZPKG_DIST,
 	// which is exactly DistBase's own spelling, scheme included.
-	want := bottle.DistBase
+	want := artifact.DistBase
 	if want == "" {
-		t.Fatal("bottle.DistBase is empty: this test would then pass on any help text at all")
+		t.Fatal("artifact.DistBase is empty: this test would then pass on any help text at all")
 	}
 	for _, tc := range []struct{ what, text string }{
 		{"zpkgx usage", usage},
@@ -52,15 +52,15 @@ func TestEveryHelpTextNamesTheRealRegistryDefault(t *testing.T) {
 // cannot tell it apart; naming it here is what makes the next rename stop.
 func TestNoHelpTextNamesTheEmptyRegistry(t *testing.T) {
 	const empty = "ghcr.io/go-zpkg/packages"
-	if strings.Contains(bottle.DistBase, empty) {
-		t.Skip("DistBase now points there, so the bottles were copied and this check is obsolete")
+	if strings.Contains(artifact.DistBase, empty) {
+		t.Skip("DistBase now points there, so the artifacts were copied and this check is obsolete")
 	}
 	for _, tc := range []struct{ what, text string }{
 		{"zpkgx usage", usage},
 		{"zpkgs usage", zpkgsUsage},
 	} {
 		if strings.Contains(tc.text, empty) {
-			t.Errorf("%s names %s, which holds no bottles — probed ABSENT 2026-11-04 "+
+			t.Errorf("%s names %s, which holds no artifacts — probed ABSENT 2026-11-04 "+
 				"against gnu.org/bash as a present control", tc.what, empty)
 		}
 	}

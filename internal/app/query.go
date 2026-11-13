@@ -5,7 +5,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx -Q` — upstream's query mode, which this fork had never implemented.
@@ -25,7 +25,7 @@ import (
 // It reads the CATALOGUE, so it needs no network and works in a scratch
 // image, and it answers from the same file `zpkgs ls` and <TAB> read.
 func runQuery(args []string, stdout, stderr io.Writer) int {
-	cat, src, err := browseCatalog(bottle.Dir())
+	cat, src, err := browseCatalog(artifact.Dir())
 	if err != nil {
 		// Same treatment the other readers give it: a named and unreadable
 		// ZPKG_CATALOG is an error, not a quiet fallback.
@@ -53,7 +53,7 @@ func runQuery(args []string, stdout, stderr io.Writer) int {
 // because the question "-Q with no argument" answers is "what could I type",
 // and a project name is not always something you can type — gnu.org/coreutils
 // is not a command.
-func queryAll(cat bottle.Catalog, stdout io.Writer) int {
+func queryAll(cat artifact.Catalog, stdout io.Writer) int {
 	type pair struct{ cmd, project string }
 	var out []pair
 	for _, p := range cat.Projects {
@@ -82,14 +82,14 @@ func queryAll(cat bottle.Catalog, stdout io.Writer) int {
 // which is the question upstream's -Q is actually used to answer in a
 // script.
 //
-// ⛔ IT ASKS bottle.ProvidersOf RATHER THAN WALKING Provides ITSELF. The
+// ⛔ IT ASKS artifact.ProvidersOf RATHER THAN WALKING Provides ITSELF. The
 // first draft of this file carried a `commandLeaf` helper that stripped a
 // "bin/" prefix, on the assumption that a catalogue stores `provides` the
 // way a RECIPE writes it. It does not — `bk catalog` writes the bare
 // command, which is why `ProvidersOf` compares with `==`. Two readers of
 // one field, disagreeing about its shape, is how a question gets two
 // answers; this is the reader the rest of the program already uses.
-func queryOne(cat bottle.Catalog, cmd string, stdout, stderr io.Writer) int {
+func queryOne(cat artifact.Catalog, cmd string, stdout, stderr io.Writer) int {
 	hits := cat.ProvidersOf(cmd)
 	if len(hits) == 0 {
 		fmt.Fprintf(stderr, pfx()+"nothing in this catalogue provides %q\n", cmd)
@@ -163,7 +163,7 @@ func unknownVerb(word string, stderr io.Writer) (int, bool) {
 	if !isVerb(word) {
 		return 0, false
 	}
-	cat, _, err := browseCatalog(bottle.Dir())
+	cat, _, err := browseCatalog(artifact.Dir())
 	if err == nil {
 		if len(cat.ProvidersOf(word)) > 0 {
 			return 0, false

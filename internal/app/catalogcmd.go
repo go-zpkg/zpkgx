@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx catalog` — the ONE path that talks to the registry about what exists.
@@ -20,7 +20,7 @@ import (
 // in.
 //
 // Before this, every TAB spawned a `zpkgx` that fetched an OCI token and
-// pulled the catalogue bottle — 470 KB as measured 2026-10-11, and ~200 KB
+// pulled the catalogue artifact — 470 KB as measured 2026-10-11, and ~200 KB
 // when this was written, because `bk catalog --versions` grew it; the figure
 // carries its date for exactly that reason — once per press, with no reuse
 // between them, because each press is a fresh process. Measured at ~0.4 s
@@ -39,7 +39,7 @@ func runCatalogCmd(args []string, stdout, stderr io.Writer) int {
 	case len(args) == 0:
 		return catalogStatus(stdout, stderr)
 	case len(args) == 1 && args[0] == "update":
-		osn, arch := bottle.HostSlug()
+		osn, arch := artifact.HostSlug()
 		return catalogUpdate(osn, arch, stdout, stderr)
 	case len(args) == 3 && args[0] == "update" && args[1] == "--platform":
 		osn, arch, ok := strings.Cut(args[2], "/")
@@ -102,7 +102,7 @@ func catalogPlatforms(stdout, stderr io.Writer) int {
 // benchmark that wrote the index itself would be a second implementation of
 // the format.
 func catalogReindex(stdout, stderr io.Writer) int {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	p := catalogPath(osn, arch)
 	b, err := osReadFile(p)
 	if err != nil {
@@ -110,7 +110,7 @@ func catalogReindex(stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, pfx()+"nothing to index — run: "+tool+" catalog update")
 		return 1
 	}
-	c, err := bottle.UnmarshalCatalog(b)
+	c, err := artifact.UnmarshalCatalog(b)
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"catalog reindex: %v\n", err)
 		return 1
@@ -135,7 +135,7 @@ func catalogReindex(stdout, stderr io.Writer) int {
 // can answer. It belongs with the store it describes — and a scratch image
 // that ships one just drops the file in beside the packages.
 func catalogPath(osn, arch string) string {
-	return filepath.Join(bottle.Dir(), "catalog", osn+"-"+arch+".json")
+	return filepath.Join(artifact.Dir(), "catalog", osn+"-"+arch+".json")
 }
 
 // catalogAbsent says whether there is simply NO catalogue here, as opposed
@@ -143,7 +143,7 @@ func catalogPath(osn, arch string) string {
 // sentence for each, because "run zpkgx catalog update" is the fix for the
 // first and no help at all for the second.
 func catalogAbsent() bool {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	_, err := osStat(catalogPath(osn, arch))
 	return err != nil
 }
@@ -155,7 +155,7 @@ func catalogAbsent() bool {
 // otherwise be asked at all. `fetchCatalogFor` always took os and arch; only
 // this command pinned them to the host, and that single line was enough to
 // make two measurements impossible from this machine: whether a darwin/x86-64
-// bottle starts (go-zpkg/packages#330) and what `bk vulnfetch -catalog` would
+// artifact starts (go-zpkg/packages#330) and what `bk vulnfetch -catalog` would
 // report for linux before a CI job is wired to run it. An answer that needs a
 // second machine is an answer nobody checks.
 //
@@ -168,7 +168,7 @@ func catalogUpdate(osn, arch string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, pfx()+"catalog update: %v\n", err)
 		return 1
 	}
-	body, err := bottle.MarshalCatalog(c)
+	body, err := artifact.MarshalCatalog(c)
 	if err != nil {
 		fmt.Fprintln(stderr, pfx()+"catalog update:", err)
 		return 1
@@ -221,7 +221,7 @@ func catalogUpdate(osn, arch string, stdout, stderr io.Writer) int {
 // had read the named one — the same defect as go-zpkg/zpkgx#110, in the one
 // place where a wrong answer cannot be caught by comparing it with anything.
 func catalogStatus(stdout, stderr io.Writer) int {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	p := catalogPath(osn, arch)
 	named := os.Getenv("ZPKG_CATALOG")
 	if named != "" {
@@ -245,7 +245,7 @@ func catalogStatus(stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "no catalogue for %s/%s — run: %s catalog update\n", osn, arch, tool)
 		return 0
 	}
-	c, err := bottle.UnmarshalCatalog(b)
+	c, err := artifact.UnmarshalCatalog(b)
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"%s is not a catalogue: %v\n", p, err)
 		return 1
@@ -259,7 +259,7 @@ func catalogStatus(stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "%s\n", p)
 	fmt.Fprintf(stdout, "%d project(s), %d with dependencies, %s\n",
 		len(c.Projects), withDeps, c.Age(time.Now()))
-	// SAY IT WHEN SOMETHING WAS DROPPED. bottle removes version strings it
+	// SAY IT WHEN SOMETHING WAS DROPPED. artifact removes version strings it
 	// cannot read rather than refusing the file — a version reaches a
 	// catalogue from an upstream recipe, and refusing would hand a recipe
 	// author a switch that turns off every <TAB> for everybody. But a
@@ -280,19 +280,19 @@ var (
 	osReadFile  = os.ReadFile
 	osStat      = os.Stat
 
-	fetchCatalogFor = func(osn, arch string) (bottle.Catalog, error) {
-		c, err := bottle.NewOCIClient(bottle.DistBase)
+	fetchCatalogFor = func(osn, arch string) (artifact.Catalog, error) {
+		c, err := artifact.NewOCIClient(artifact.DistBase)
 		if err != nil {
-			return bottle.Catalog{}, err
+			return artifact.Catalog{}, err
 		}
-		return bottle.FetchCatalog(c, osn, arch)
+		return artifact.FetchCatalog(c, osn, arch)
 	}
 
 	fetchPlatforms = func() ([]string, error) {
-		c, err := bottle.NewOCIClient(bottle.DistBase)
+		c, err := artifact.NewOCIClient(artifact.DistBase)
 		if err != nil {
 			return nil, err
 		}
-		return c.Platforms(bottle.CatalogProjectName, bottle.CatalogVersion)
+		return c.Platforms(artifact.CatalogProjectName, artifact.CatalogVersion)
 	}
 )

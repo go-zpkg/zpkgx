@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx why <project> <dependency>` — WHICH LINK put it there.
@@ -34,7 +34,7 @@ func runWhy(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	from, to := args[0], args[1]
-	cat, src, err := browseCatalog(bottle.Dir())
+	cat, src, err := browseCatalog(artifact.Dir())
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"ZPKG_CATALOG names %s and it cannot be read: %v\n", src, err)
 		return 2

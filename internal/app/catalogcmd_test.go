@@ -8,17 +8,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // withFetch answers `zpkgx catalog update` without a registry, and counts the
 // answers. The count is the point of most of this file: the contract being
 // tested is that nothing BUT this command ever asks.
-func withFetch(t *testing.T, c bottle.Catalog, err error) *int {
+func withFetch(t *testing.T, c artifact.Catalog, err error) *int {
 	t.Helper()
 	n := 0
 	prev := fetchCatalogFor
-	fetchCatalogFor = func(osn, arch string) (bottle.Catalog, error) {
+	fetchCatalogFor = func(osn, arch string) (artifact.Catalog, error) {
 		n++
 		return c, err
 	}
@@ -26,10 +26,10 @@ func withFetch(t *testing.T, c bottle.Catalog, err error) *int {
 	return &n
 }
 
-func smallCatalog() bottle.Catalog {
-	return bottle.Catalog{
+func smallCatalog() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-05T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "gnu.org/bash", Versions: []string{"5.3"}},
 			{Project: "zlib.net", Versions: []string{"1.3.2"}, Deps: []string{"gnu.org/bash"}},
 		},
@@ -39,7 +39,7 @@ func smallCatalog() bottle.Catalog {
 // TestUpdateIsTheOnlyThingThatFetches is the whole of phase 1 in one test.
 //
 // Before this, every <TAB> spawned a zpkgx that took an OCI token and pulled
-// the catalogue bottle — per press, never reused, because each press is a
+// the catalogue artifact — per press, never reused, because each press is a
 // fresh process. The fix is not a cache with a TTL; it is a line: ONE
 // command fetches, everything else reads a file. `guix pull` and
 // `nix-channel --update` draw it in the same place.
@@ -77,7 +77,7 @@ func TestUpdateIsTheOnlyThingThatFetches(t *testing.T) {
 	if *fetches != 1 {
 		t.Errorf("update fetched %d time(s), want 1", *fetches)
 	}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	want := filepath.Join(dir, "catalog", osn+"-"+arch+".json")
 	if !strings.Contains(out.String(), want) {
 		t.Errorf("update did not say where it wrote: %q", out.String())
@@ -114,7 +114,7 @@ func TestUpdateIsAtomic(t *testing.T) {
 	t.Setenv("ZPKG_DIR", dir)
 	withFetch(t, smallCatalog(), nil)
 
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	final := filepath.Join(dir, "catalog", osn+"-"+arch+".json")
 
 	var wrote, renamed []string
@@ -155,14 +155,14 @@ func TestAFailedUpdateKeepsTheOldCatalogue(t *testing.T) {
 	if code := runCatalogCmd([]string{"update"}, &bytes.Buffer{}, &bytes.Buffer{}); code != 0 {
 		t.Fatal("first update failed")
 	}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	final := filepath.Join(dir, "catalog", osn+"-"+arch+".json")
 	before, err := os.ReadFile(final)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	withFetch(t, bottle.Catalog{}, errors.New("dial tcp: no route to host"))
+	withFetch(t, artifact.Catalog{}, errors.New("dial tcp: no route to host"))
 	var errb bytes.Buffer
 	if code := runCatalogCmd([]string{"update"}, &bytes.Buffer{}, &errb); code != 1 {
 		t.Errorf("a failed update exited %d, want 1", code)
@@ -201,7 +201,7 @@ func TestTheFallbackSentenceMatchesTheState(t *testing.T) {
 		t.Errorf("a fresh machine is not told what to run: %q", errb.String())
 	}
 
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	final := filepath.Join(dir, "catalog", osn+"-"+arch+".json")
 	if err := os.MkdirAll(filepath.Dir(final), 0o755); err != nil {
 		t.Fatal(err)
@@ -322,7 +322,7 @@ func asPkgs(t *testing.T) {
 //
 // `fetchCatalogFor` always took os and arch; only the command pinned them to
 // the host, and that one line made two measurements impossible from a darwin
-// machine: whether a darwin/x86-64 bottle starts (go-zpkg/packages#330), and
+// machine: whether a darwin/x86-64 artifact starts (go-zpkg/packages#330), and
 // what `bk vulnfetch -catalog` reports for linux before wiring a CI job to
 // run it. An answer that needs a second machine is an answer nobody checks.
 func TestCatalogUpdateTakesAPlatform(t *testing.T) {

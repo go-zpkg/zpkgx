@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgs request` — turn "this package is missing" into a report somebody can
@@ -99,7 +99,7 @@ func runRequest(args []string, stdout, stderr io.Writer) int {
 // said so or where to say it.
 //
 // ⛔ IT MATCHES A TYPE, NOT A SENTENCE. The first version asked
-// bottle.IsNotPublished, whose last resort reads the error's TEXT — and
+// artifact.IsNotPublished, whose last resort reads the error's TEXT — and
 // its first live run fired on
 //
 //	zpkgx: command not found in the requested packages: true
@@ -108,11 +108,11 @@ func runRequest(args []string, stdout, stderr io.Writer) int {
 // appears on unrelated failures teaches people to ignore hints.
 //
 // ⛔ AND IT ASKS ONE QUESTION, BECAUSE THE FIRST VERSION ANSWERED HALF OF
-// IT. *bottle.NotPublishedError alone means "the registry has no such
+// IT. *artifact.NotPublishedError alone means "the registry has no such
 // repository" — a brand-new package, the RARE case. The ordinary one is a
-// recipe with no bottle for your platform: 567 of 1940 projects in the
+// recipe with no artifact for your platform: 567 of 1940 projects in the
 // published darwin/aarch64 catalogue on 2026-10-23, against which v0.25.0
-// shipped a hint that could not fire. bottle.ProjectToRequest (v0.53.0)
+// shipped a hint that could not fire. artifact.ProjectToRequest (v0.53.0)
 // answers both and names the project, so this stays one call; two
 // predicates here is exactly how the second one came to be forgotten.
 //
@@ -120,7 +120,7 @@ func runRequest(args []string, stdout, stderr io.Writer) int {
 // verify and a registry having a bad day are not things to ask somebody to
 // publish.
 func sayHowToAsk(err error, stderr io.Writer) {
-	project := bottle.ProjectToRequest(err)
+	project := artifact.ProjectToRequest(err)
 	if project == "" {
 		return
 	}
@@ -162,7 +162,7 @@ func gatherRequest(project string) (requestFacts, error) {
 	// person was staring at when they reached for this. Treating it as a
 	// failed lookup made the tool reprint the 403 it was written to
 	// explain.
-	case bottle.IsNotPublished(err):
+	case artifact.IsNotPublished(err):
 		return f, nil // never published here, for anyone
 	case err != nil:
 		// ⛔ And not knowing is still not an absence: a registry that would
@@ -170,30 +170,30 @@ func gatherRequest(project string) (requestFacts, error) {
 		// missing.
 		return f, fmt.Errorf("asking the registry about %s: %w", project, err)
 	}
-	// ⛔ bottle.VersionsFromTags, NOT a filter and a sort written here.
+	// ⛔ artifact.VersionsFromTags, NOT a filter and a sort written here.
 	// This went through three versions, and each one was wrong in a way
 	// only the registry could show:
 	//
 	//  1. IsPlatformTag alone — ghcr has no referrers API, so ORAS parks
 	//     attestations under `sha256-<digest>` in the same listing, and a
 	//     project with no releases was reported as "2 version(s) tagged".
-	//  2. bottle.IsVersionTag + sort.Strings — which is TEXT order, so
+	//  2. artifact.IsVersionTag + sort.Strings — which is TEXT order, so
 	//     "26.8.1" beat "26.12.1" and this command said nodejs.org was
 	//     published "at 26.8.1" an hour after 26.12.1 went up. Not just
 	//     the number: the platform list under it was read off the wrong
 	//     version's index.
 	//  3. this.
 	//
-	// VersionsFromTags (bottle v0.54.0) is the call ociVersionsFor has
+	// VersionsFromTags (artifact v0.54.0) is the call ociVersionsFor has
 	// always made. It orders numerically, drops tags flavoured for another
 	// glibc — which IsVersionTag accepts — and folds "1.0.0", "v1.0.0" and
 	// "1.0" into one version, which our registry really does carry.
-	vers := bottle.VersionsFromTags(tags)
+	vers := artifact.VersionsFromTags(tags)
 	f.versions = len(vers)
 	if len(vers) == 0 {
 		return f, nil // never published here, for anyone
 	}
-	// ⛔ RegistryTag, not Raw: a flavoured bottle's version is "2.44" and
+	// ⛔ RegistryTag, not Raw: a flavoured artifact's version is "2.44" and
 	// its tag is "2.44-glibc2.27.0", and asking the index for the former
 	// answers "platform not in index" — which this command would print as
 	// a measured absence.
@@ -275,12 +275,12 @@ func (f requestFacts) issueURL() string {
 }
 
 func hostPlatform() string {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	return osn + "/" + arch
 }
 
 // newOCI is a seam: the tests need neither a registry nor a network.
-var newOCI = func() (ociAsker, error) { return bottle.NewOCIClient(bottle.DistBase) }
+var newOCI = func() (ociAsker, error) { return artifact.NewOCIClient(artifact.DistBase) }
 
 type ociAsker interface {
 	ListTags(project string) ([]string, error)

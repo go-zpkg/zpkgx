@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-func commandCatalog() bottle.Catalog {
-	return bottle.Catalog{
+func commandCatalog() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-12T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "gohugo.io", Versions: []string{"0.167.0"}, Provides: []string{"hugo"}},
 			{Project: "nodejs.org", Versions: []string{"26.8.1"}, Provides: []string{"node", "npm", "npx"}},
 			{Project: "zoo.example/hugo-mirror", Provides: []string{"hugo-mirror", "hugo"}},
@@ -67,7 +67,7 @@ func TestResolveKeepsTheConstraintInBothForms(t *testing.T) {
 func TestAProjectNameNeverReadsTheCatalogue(t *testing.T) {
 	reads := 0
 	prev := catalogFor
-	catalogFor = func() (bottle.Catalog, error) { reads++; return commandCatalog(), nil }
+	catalogFor = func() (artifact.Catalog, error) { reads++; return commandCatalog(), nil }
 	t.Cleanup(func() { catalogFor = prev })
 
 	m := &commandMapper{dir: t.TempDir()}
@@ -90,7 +90,7 @@ func TestAProjectNameNeverReadsTheCatalogue(t *testing.T) {
 func TestABareWordDoesReadTheCatalogue(t *testing.T) {
 	reads := 0
 	prev := catalogFor
-	catalogFor = func() (bottle.Catalog, error) { reads++; return commandCatalog(), nil }
+	catalogFor = func() (artifact.Catalog, error) { reads++; return commandCatalog(), nil }
 	t.Cleanup(func() { catalogFor = prev })
 	withInstalled(t, nil)
 
@@ -153,7 +153,7 @@ func TestAnUnknownCommandPointsAtSearch(t *testing.T) {
 // …pantry…", which reads as "go-zpkg does not know hugo" when the truth is
 // "this store has no catalogue yet".
 func TestNoCatalogueSaysToUpdateItRatherThanBlamingThePantry(t *testing.T) {
-	withCatalog(t, bottle.Catalog{}, errors.New("open …/catalog: no such file or directory"))
+	withCatalog(t, artifact.Catalog{}, errors.New("open …/catalog: no such file or directory"))
 	m := &commandMapper{dir: t.TempDir()}
 	_, _, err := m.resolve("hugo")
 	if err == nil {
@@ -171,7 +171,7 @@ func TestNoCatalogueSaysToUpdateItRatherThanBlamingThePantry(t *testing.T) {
 // holds nothing cannot answer, and falling through to the pantry would ask
 // about a project called `hugo` that cannot exist.
 func TestAnEmptyCatalogueIsTreatedAsNone(t *testing.T) {
-	withCatalog(t, bottle.Catalog{Generated: "2026-10-12T09:00:00Z"}, nil)
+	withCatalog(t, artifact.Catalog{Generated: "2026-10-12T09:00:00Z"}, nil)
 	m := &commandMapper{dir: t.TempDir()}
 	if _, _, err := m.resolve("hugo"); err == nil || !strings.Contains(err.Error(), "zpkgs catalog update") {
 		t.Errorf("empty catalogue: err = %v", err)

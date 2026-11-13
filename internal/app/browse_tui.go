@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 	"golang.org/x/term"
 )
 
@@ -58,7 +58,7 @@ func runBrowse(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 1 {
 		at = args[0]
 	}
-	cat, src, err := browseCatalog(bottle.Dir())
+	cat, src, err := browseCatalog(artifact.Dir())
 	if err != nil {
 		fmt.Fprintf(stderr, pfx()+"ZPKG_CATALOG names %s and it cannot be read: %v\n", src, err)
 		return 2
@@ -95,7 +95,7 @@ func nodeLabel(at string) string {
 
 // browser is where the cursor is and what it has been told to remember.
 type browser struct {
-	cat     bottle.Catalog
+	cat     artifact.Catalog
 	src     string
 	at      string   // the node whose children are listed
 	view    view     // names, dependencies, or dependents
@@ -242,7 +242,7 @@ func (b *browser) render(w io.Writer, height int) {
 			case len(p.Versions) > 0:
 				note = p.Versions[0]
 			case swept:
-				note = noBottle
+				note = noArtifact
 			}
 			note += strings.TrimRight(haveNote(rows[i], firstVersion(p)), " ")
 		}

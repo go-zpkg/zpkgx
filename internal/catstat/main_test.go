@@ -31,12 +31,12 @@ func TestItCountsTheFieldTheFactoryWrites(t *testing.T) {
 		"summaries     1 (25.0%)",
 		"provides      2 (50.0%)",
 		// A project named by the pantry with nothing published is NOT
-		// bottled — that distinction is the whole point of `no bottle
+		// packaged — that distinction is the whole point of `no artifact
 		// here`. The fourth entry carries a PLATFORM and no version, so
 		// counting platforms instead of versions gives 3 here; the
 		// factory happens never to emit that pair today, which is exactly
 		// why the fixture has to, or the definition is pinned by nothing.
-		"with a bottle 2 (50.0%)",
+		"with an artifact 2 (50.0%)",
 		"commands      3",
 		"namespaces    1",
 		// Zero here, and ONE in the fixture below. Without that pair this
@@ -67,7 +67,7 @@ func TestAnEmptyCatalogueIsRefused(t *testing.T) {
 	}
 }
 
-// IT GOES THROUGH bottle's PARSER, so a catalogue bottle's own refusals are
+// IT GOES THROUGH artifact's PARSER, so a catalogue artifact's own refusals are
 // this tool's refusals too: nonsense is reported, not counted as zero.
 func TestNonsenseIsReportedNotCounted(t *testing.T) {
 	if err := report(&strings.Builder{}, write(t, "not json at all")); err == nil {
@@ -115,7 +115,7 @@ func TestItCountsABareProjectName(t *testing.T) {
 
 // ⛔ A PERCENTAGE IS NOT A WORK LIST, and the two counts must agree. The
 // fixture's `example.com` carries a PLATFORM and no version — the pair that
-// makes "has a bottle" and "is named for this platform" different questions
+// makes "has an artifact" and "is named for this platform" different questions
 // — so a -missing that listed by platform instead of by version would print
 // one name here and say two.
 func TestMissingNamesWhatTheCountLeavesAnonymous(t *testing.T) {
@@ -124,7 +124,7 @@ func TestMissingNamesWhatTheCountLeavesAnonymous(t *testing.T) {
 		t.Fatalf("listMissing: %v", err)
 	}
 	out := b.String()
-	if !strings.Contains(out, "2 of 4 project(s) have no bottle here") {
+	if !strings.Contains(out, "2 of 4 project(s) have no artifact here") {
 		t.Errorf("the tally does not match the census:\n%s", out)
 	}
 	for _, want := range []string{"langchain.com", "example.com"} {
@@ -132,11 +132,11 @@ func TestMissingNamesWhatTheCountLeavesAnonymous(t *testing.T) {
 			t.Errorf("missing %q from:\n%s", want, out)
 		}
 	}
-	// And the bottled ones are NOT in the work list. Without this the test
+	// And the packaged ones are NOT in the work list. Without this the test
 	// passes against a version that prints every project.
 	for _, unwanted := range []string{"abseil.io", "stedolan.github.io/jq"} {
 		if strings.Contains(out, unwanted) {
-			t.Errorf("%q has a bottle and was listed as missing:\n%s", unwanted, out)
+			t.Errorf("%q has an artifact and was listed as missing:\n%s", unwanted, out)
 		}
 	}
 }
@@ -149,7 +149,7 @@ func TestTheCapSaysItIsOne(t *testing.T) {
 		t.Fatalf("listMissing: %v", err)
 	}
 	out := b.String()
-	if !strings.Contains(out, "2 of 4 project(s) have no bottle here") {
+	if !strings.Contains(out, "2 of 4 project(s) have no artifact here") {
 		t.Errorf("the total changed with the cap:\n%s", out)
 	}
 	if !strings.Contains(out, "… 1 more") {

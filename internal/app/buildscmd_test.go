@@ -11,15 +11,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // installBuild makes the directory an install makes: hashed, with a payload.
 func installBuild(t *testing.T, store, project, version, seed string) string {
 	t.Helper()
-	v := bottle.Ver{Raw: version}
-	hash := bottle.StoreHash(v, "digest:"+seed, "")
-	if err := os.MkdirAll(filepath.Join(bottle.StoreBuildPrefix(store, project, v, hash), "lib"), 0o755); err != nil {
+	v := artifact.Ver{Raw: version}
+	hash := artifact.StoreHash(v, "digest:"+seed, "")
+	if err := os.MkdirAll(filepath.Join(artifact.StoreBuildPrefix(store, project, v, hash), "lib"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return hash
@@ -32,7 +32,7 @@ func buildsStore(t *testing.T) string {
 	dir := t.TempDir()
 	t.Setenv("ZPKG_DIR", dir)
 	t.Setenv("ZPKG_CATALOG", "")
-	// ⛔⛔ bottle.DistBase IS SET DIRECTLY, NOT THROUGH ZPKG_DIST. The
+	// ⛔⛔ artifact.DistBase IS SET DIRECTLY, NOT THROUGH ZPKG_DIST. The
 	// environment is read once by the app's configuration step, which these
 	// tests do not run — so setting ZPKG_DIST here left DistBase at its
 	// compiled-in default and the first version of this test went out to the
@@ -42,9 +42,9 @@ func buildsStore(t *testing.T) string {
 	//
 	// A blackhole: connection refused immediately, so the registry half fails
 	// fast and deterministically instead of waiting on DNS.
-	old := bottle.DistBase
-	bottle.DistBase = "oci://127.0.0.1:1/nothing"
-	t.Cleanup(func() { bottle.DistBase = old })
+	old := artifact.DistBase
+	artifact.DistBase = "oci://127.0.0.1:1/nothing"
+	t.Cleanup(func() { artifact.DistBase = old })
 	return dir
 }
 
@@ -115,15 +115,15 @@ func TestSortingByDateIsRefusedWithTheReason(t *testing.T) {
 	}
 }
 
-// The flag's help is built from bottle's own list, so it cannot drift from
+// The flag's help is built from artifact's own list, so it cannot drift from
 // the keys the library actually accepts.
 func TestTheSortHelpNamesEveryKeyTheLibraryAccepts(t *testing.T) {
 	help := sortFlagHelp()
-	for _, o := range bottle.BuildOrders {
+	for _, o := range artifact.BuildOrders {
 		if !strings.Contains(help, string(o)) {
 			t.Errorf("help %q does not name %q", help, o)
 		}
-		if _, err := bottle.ParseBuildOrder(string(o)); err != nil {
+		if _, err := artifact.ParseBuildOrder(string(o)); err != nil {
 			t.Errorf("help names %q but the library refuses it: %v", o, err)
 		}
 	}
@@ -131,11 +131,11 @@ func TestTheSortHelpNamesEveryKeyTheLibraryAccepts(t *testing.T) {
 
 // goSpec is two builds of one version that differ ONLY in the Go toolchain
 // they were compiled with — the CVE rebuild case.
-func goSpec(goVer, goHash string) bottle.Concrete {
-	return bottle.Concrete{
+func goSpec(goVer, goHash string) artifact.Concrete {
+	return artifact.Concrete{
 		Platform: "linux/x86-64",
 		Recipe:   "sha256:0123456789abcdef",
-		Deps: []bottle.Dep{
+		Deps: []artifact.Dep{
 			{Project: "go.dev", Version: goVer, Hash: goHash},
 			{Project: "zlib.net", Version: "1.3.2", Hash: "cccccccccccccccc"},
 		},
@@ -149,10 +149,10 @@ func goSpec(goVer, goHash string) bottle.Concrete {
 // glance. A reader who cannot do that is back to comparing hashes.
 func TestTheTableTellsTwoToolchainRebuildsApart(t *testing.T) {
 	const bad, good = "27o3ysxva6swayci", "rnp44isdgdtzxcit"
-	builds := []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: bad}, Installed: "/s", Published: true,
+	builds := []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: bad}, Installed: "/s", Published: true,
 			Spec: goSpec("1.27.3", "aaaaaaaaaaaaaaaa")},
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: good}, Published: true,
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: good}, Published: true,
 			Spec: goSpec("1.27.4", "bbbbbbbbbbbbbbbb")},
 	}
 
@@ -176,18 +176,18 @@ func TestTheTableTellsTwoToolchainRebuildsApart(t *testing.T) {
 // the table says the build still resolves.
 func TestAWithdrawnBuildIsMarkedInTheRowAndExplainedBelow(t *testing.T) {
 	const bad, good = "27o3ysxva6swayci", "rnp44isdgdtzxcit"
-	oldFor := bottleWithdrawalOf
-	bottleWithdrawalOf = func(project, version, hash string) (bottle.Withdrawal, bool) {
+	oldFor := artifactWithdrawalOf
+	artifactWithdrawalOf = func(project, version, hash string) (artifact.Withdrawal, bool) {
 		if hash == bad {
-			return bottle.Withdrawal{Version: version, Hash: bad, Because: "CVE-2026-1234", SupersededBy: good}, true
+			return artifact.Withdrawal{Version: version, Hash: bad, Because: "CVE-2026-1234", SupersededBy: good}, true
 		}
-		return bottle.Withdrawal{}, false
+		return artifact.Withdrawal{}, false
 	}
-	t.Cleanup(func() { bottleWithdrawalOf = oldFor })
+	t.Cleanup(func() { artifactWithdrawalOf = oldFor })
 
-	builds := []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: bad}, Published: true, Spec: goSpec("1.27.3", "aaaaaaaaaaaaaaaa")},
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: good}, Published: true, Spec: goSpec("1.27.4", "bbbbbbbbbbbbbbbb")},
+	builds := []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: bad}, Published: true, Spec: goSpec("1.27.3", "aaaaaaaaaaaaaaaa")},
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: good}, Published: true, Spec: goSpec("1.27.4", "bbbbbbbbbbbbbbbb")},
 	}
 	var out bytes.Buffer
 	printBuilds(&out, "fftw.org", builds, false)
@@ -227,8 +227,8 @@ func rowFor(t *testing.T, out, hash string) string {
 // summary of what was recorded rather than an empty cell.
 func TestASingleBuildIsSummarisedRatherThanLeftBlank(t *testing.T) {
 	var out bytes.Buffer
-	printBuilds(&out, "fftw.org", []bottle.Build{{
-		Version:   bottle.Ver{Raw: "3.3.11", Variant: "27o3ysxva6swayci"},
+	printBuilds(&out, "fftw.org", []artifact.Build{{
+		Version:   artifact.Ver{Raw: "3.3.11", Variant: "27o3ysxva6swayci"},
 		Published: true, Spec: goSpec("1.27.3", "aaaaaaaaaaaaaaaa"),
 	}}, false)
 	got := out.String()
@@ -240,13 +240,13 @@ func TestASingleBuildIsSummarisedRatherThanLeftBlank(t *testing.T) {
 }
 
 // ⛔ A BUILD NOTHING RECORDS SAYS SO. An empty cell reads as a rendering
-// fault; "nothing recorded" is the truth, and it is the state of every bottle
+// fault; "nothing recorded" is the truth, and it is the state of every artifact
 // in the registry today.
 func TestABuildWithNoSpecSaysNothingWasRecorded(t *testing.T) {
 	var out bytes.Buffer
-	printBuilds(&out, "fftw.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11"}, Published: true},
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "27o3ysxva6swayci"}, Published: true,
+	printBuilds(&out, "fftw.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11"}, Published: true},
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "27o3ysxva6swayci"}, Published: true,
 			Spec: goSpec("1.27.3", "aaaaaaaaaaaaaaaa")},
 	}, false)
 	got := out.String()
@@ -255,27 +255,27 @@ func TestABuildWithNoSpecSaysNothingWasRecorded(t *testing.T) {
 	}
 }
 
-// ⛔⛔ A PUBLISHED BOTTLE WITH NO HASH IS WHAT THE REGISTRY IS FULL OF TODAY,
-// and it must print as a fact about the bottle rather than as a blank cell.
+// ⛔⛔ A PUBLISHED ARTIFACT WITH NO HASH IS WHAT THE REGISTRY IS FULL OF TODAY,
+// and it must print as a fact about the artifact rather than as a blank cell.
 // Found by accident: the first version of this file set ZPKG_DIST, which the
 // app reads only through its configuration step, so the test went out to the
 // real ghcr and came back with `fftw.org 3.3.11` carrying no hash — a row
 // whose HASH column was empty and which no reader could name or explain.
-func TestABottleWithNoIdentityIsNamedRatherThanBlank(t *testing.T) {
+func TestAArtifactWithNoIdentityIsNamedRatherThanBlank(t *testing.T) {
 	var out bytes.Buffer
-	printBuilds(&out, "fftw.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11"}, Published: true},
+	printBuilds(&out, "fftw.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11"}, Published: true},
 	}, false)
 	if !strings.Contains(out.String(), "(none)") {
-		t.Errorf("a hashless bottle printed as a blank cell:\n%s", out.String())
+		t.Errorf("a hashless artifact printed as a blank cell:\n%s", out.String())
 	}
 	if !strings.Contains(out.String(), "cannot be named by hash") {
 		t.Errorf("nothing explains what (none) means:\n%s", out.String())
 	}
 	// And the note appears only when there IS such a row.
 	var out2 bytes.Buffer
-	printBuilds(&out2, "fftw.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "abcdefghijklmnop"}, Published: true},
+	printBuilds(&out2, "fftw.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "abcdefghijklmnop"}, Published: true},
 	}, false)
 	if strings.Contains(out2.String(), "(none)") {
 		t.Errorf("the note was printed with nothing to explain:\n%s", out2.String())
@@ -285,24 +285,24 @@ func TestABottleWithNoIdentityIsNamedRatherThanBlank(t *testing.T) {
 // ⛔⛔ "NOT ASKED" AND "NOBODY SIGNED IT" MUST NOT LOOK ALIKE IN THE COLUMN.
 // A nil report is a registry we could not reach; rendering it as "unsigned"
 // turns a network failure into a claim about the artefact, and that is how a
-// reader ends up trusting a bottle nobody signed — or rebuilding one that was
+// reader ends up trusting an artifact nobody signed — or rebuilding one that was
 // perfectly good.
 func TestSignedByTellsNotAskedFromNobody(t *testing.T) {
-	ok := &bottle.SignatureReport{Signers: []string{"go-zpkg", "alice"}, Threshold: 2}
-	short := &bottle.SignatureReport{Signers: []string{"go-zpkg"}, Threshold: 2}
-	none := &bottle.SignatureReport{Threshold: 1}
+	ok := &artifact.SignatureReport{Signers: []string{"go-zpkg", "alice"}, Threshold: 2}
+	short := &artifact.SignatureReport{Signers: []string{"go-zpkg"}, Threshold: 2}
+	none := &artifact.SignatureReport{Threshold: 1}
 
 	var out bytes.Buffer
-	printBuilds(&out, "fftw.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "aaaaaaaaaaaaaaaa"}, Published: true, Signatures: ok,
+	printBuilds(&out, "fftw.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "aaaaaaaaaaaaaaaa"}, Published: true, Signatures: ok,
 			Builder: "https://github.com/go-zpkg/zbk@v0.64.0"},
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "bbbbbbbbbbbbbbbb"}, Published: true, Signatures: short,
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "bbbbbbbbbbbbbbbb"}, Published: true, Signatures: short,
 			Builder: "https://github.com/go-pkgx/bk@v0.26.0"},
-		// Asked, and the bottle carries no provenance — most of the
+		// Asked, and the artifact carries no provenance — most of the
 		// registry today.
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "cccccccccccccccc"}, Published: true, Signatures: none},
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "cccccccccccccccc"}, Published: true, Signatures: none},
 		// Never asked at all.
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "dddddddddddddddd"}, Published: true},
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "dddddddddddddddd"}, Published: true},
 	}, false)
 	got := out.String()
 
@@ -338,7 +338,7 @@ func TestSignedByTellsNotAskedFromNobody(t *testing.T) {
 	}
 
 	// ⛔⛔ BUILT BY HAS THREE STATES AND THEY MUST NOT COLLAPSE. "not
-	// recorded" is a fact about the bottle — most of the registry predates
+	// recorded" is a fact about the artifact — most of the registry predates
 	// provenance — and "?" is a fact about the network. Rendering them alike
 	// is how a reader concludes an artefact is unauditable when the registry
 	// was simply never reached.
@@ -352,8 +352,8 @@ func TestSignedByTellsNotAskedFromNobody(t *testing.T) {
 	// `https://github.com/go-pkgx/bk` flat — and a bare `bk` in this column
 	// is a tool name shaped exactly like a complete answer.
 	var noVer bytes.Buffer
-	printBuilds(&noVer, "lz4.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "1.10.0"}, Published: true, Signatures: ok,
+	printBuilds(&noVer, "lz4.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "1.10.0"}, Published: true, Signatures: ok,
 			Builder: "https://github.com/go-pkgx/bk"},
 	}, false)
 	if !strings.Contains(noVer.String(), "bk (no version)") {
@@ -368,8 +368,8 @@ func TestSignedByTellsNotAskedFromNobody(t *testing.T) {
 
 	// And the footer appears only when a row actually falls short.
 	var fine bytes.Buffer
-	printBuilds(&fine, "fftw.org", []bottle.Build{
-		{Version: bottle.Ver{Raw: "3.3.11", Variant: "aaaaaaaaaaaaaaaa"}, Published: true, Signatures: ok},
+	printBuilds(&fine, "fftw.org", []artifact.Build{
+		{Version: artifact.Ver{Raw: "3.3.11", Variant: "aaaaaaaaaaaaaaaa"}, Published: true, Signatures: ok},
 	}, false)
 	if strings.Contains(fine.String(), "REFUSED at install time") {
 		t.Errorf("the warning was printed with nothing to warn about:\n%s", fine.String())
@@ -391,7 +391,7 @@ func TestSignedByTellsNotAskedFromNobody(t *testing.T) {
 // unmeetable by construction, at this rotation and the next.
 func TestAnUnmeetableThresholdIsAConfigurationError(t *testing.T) {
 	buildsStore(t)
-	tooMany := len(bottle.DefaultTrustSet().Signers) + 1
+	tooMany := len(artifact.DefaultTrustSet().Signers) + 1
 	t.Setenv("ZPKG_TRUST_THRESHOLD", strconv.Itoa(tooMany))
 
 	var out, errb bytes.Buffer
@@ -480,9 +480,9 @@ func TestBuildsSaysNoneWhenTheRegistryAnswersWithNothing(t *testing.T) {
 		fmt.Fprint(w, "")
 	}))
 	t.Cleanup(srv.Close)
-	old := bottle.DistBase
-	bottle.DistBase = srv.URL
-	t.Cleanup(func() { bottle.DistBase = old })
+	old := artifact.DistBase
+	artifact.DistBase = srv.URL
+	t.Cleanup(func() { artifact.DistBase = old })
 
 	var out, errb bytes.Buffer
 	// --platform is given in its VALID form here, which is also the only
