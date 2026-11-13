@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 func TestCompatProjectsFromArgs(t *testing.T) {
@@ -46,13 +46,13 @@ func TestPrintCompatAttributesTheRefusals(t *testing.T) {
 	r := compatResult{
 		outcomes: []outcome{
 			{project: "ok.org"},
-			{project: "a.org", conflict: &bottle.ConflictError{
+			{project: "a.org", conflict: &artifact.ConflictError{
 				Project: "gnome.org/libxml2", Constraints: []string{">=2.14", "~2.13"},
 				AskedBy: []string{"requested", "gnu.org/gettext"}}},
-			{project: "b.org", conflict: &bottle.ConflictError{
+			{project: "b.org", conflict: &artifact.ConflictError{
 				Project: "gnome.org/libxml2", Constraints: []string{">=2.14", "2"},
 				AskedBy: []string{"requested", "freedesktop.org/fontconfig"}}},
-			{project: "c.org", conflict: &bottle.ConflictError{
+			{project: "c.org", conflict: &artifact.ConflictError{
 				Project: "unicode.org", Constraints: []string{"^71", "^73"},
 				AskedBy: []string{"qt.io", "nodejs.org"}}},
 		},
@@ -131,7 +131,7 @@ func TestSolveAll(t *testing.T) {
 	defer func() { graphFor = old }()
 	var mu sync.Mutex
 	var sawPin int
-	graphFor = func(roots map[string]string, _, _ string) (*bottle.Graph, error) {
+	graphFor = func(roots map[string]string, _, _ string) (*artifact.Graph, error) {
 		mu.Lock()
 		if roots["gnome.org/libxml2"] == ">=2.14" {
 			sawPin++
@@ -139,12 +139,12 @@ func TestSolveAll(t *testing.T) {
 		mu.Unlock()
 		switch {
 		case roots["bad.org"] != "":
-			return nil, &bottle.ConflictError{Project: "gnome.org/libxml2",
+			return nil, &artifact.ConflictError{Project: "gnome.org/libxml2",
 				Constraints: []string{">=2.14", "~2.13"}, AskedBy: []string{"requested", "gnu.org/gettext"}}
 		case roots["gone.org"] != "":
 			return nil, errors.New("no such project")
 		}
-		return &bottle.Graph{}, nil
+		return &artifact.Graph{}, nil
 	}
 
 	r := solveAll(map[string]string{"gnome.org/libxml2": ">=2.14"},
@@ -169,12 +169,12 @@ func TestSolveAll(t *testing.T) {
 func TestRunCompat(t *testing.T) {
 	old := graphFor
 	defer func() { graphFor = old }()
-	graphFor = func(roots map[string]string, _, _ string) (*bottle.Graph, error) {
+	graphFor = func(roots map[string]string, _, _ string) (*artifact.Graph, error) {
 		if roots["bad.org"] != "" {
-			return nil, &bottle.ConflictError{Project: "gnome.org/libxml2",
+			return nil, &artifact.ConflictError{Project: "gnome.org/libxml2",
 				Constraints: []string{">=2.14", "~2.13"}, AskedBy: []string{"requested", "gnu.org/gettext"}}
 		}
-		return &bottle.Graph{}, nil
+		return &artifact.Graph{}, nil
 	}
 	var b bytes.Buffer
 	err := runCompat([]string{"gnome.org/libxml2>=2.14"}, nil,
@@ -193,7 +193,7 @@ func TestRunCompat(t *testing.T) {
 func TestRunCompatAllResolve(t *testing.T) {
 	old := graphFor
 	defer func() { graphFor = old }()
-	graphFor = func(map[string]string, string, string) (*bottle.Graph, error) { return &bottle.Graph{}, nil }
+	graphFor = func(map[string]string, string, string) (*artifact.Graph, error) { return &artifact.Graph{}, nil }
 	var b bytes.Buffer
 	if err := runCompat(nil, []string{"ok.org"}, strings.NewReader(""), &b); err != nil {
 		t.Fatalf("err = %v, want nil", err)

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx --lock <file>` — run exactly what a lock pins.
@@ -44,7 +44,7 @@ import (
 // already takes, so a locked run and a free one go through ONE resolver.
 // A second code path that honoured pins its own way would drift from the
 // first, and the drift would be invisible until a build differed.
-func lockedSpecs(d bottle.Lock) []string {
+func lockedSpecs(d artifact.Lock) []string {
 	out := make([]string, 0, len(d.Pins))
 	for _, p := range d.Pins {
 		if p.Project == "" || p.Version == "" {
@@ -75,18 +75,18 @@ func splitLock(argv []string) (path string, rest []string, err error) {
 // The platform check is not ceremony. A lock records the platform it was
 // taken on because the platform CHANGES the answer: measured on our own
 // published catalogues, 537 of 1908 projects available on linux/x86-64 have
-// no bottle for darwin/aarch64. Running one lock on the other machine would
+// no artifact for darwin/aarch64. Running one lock on the other machine would
 // fail late, inside the resolver, with a message about a version rather
 // than about the lock.
-func loadLock(path string, stderr io.Writer) (bottle.Lock, error) {
+func loadLock(path string, stderr io.Writer) (artifact.Lock, error) {
 	d, err := readLockFile(path)
 	if err != nil {
-		return bottle.Lock{}, err
+		return artifact.Lock{}, err
 	}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	here := osn + "/" + arch
 	if d.Platform != "" && d.Platform != here {
-		return bottle.Lock{}, fmt.Errorf(
+		return artifact.Lock{}, fmt.Errorf(
 			"%s was locked on %s and this is %s — what a platform has is not what another has, "+
 				"so this lock cannot be honoured here", path, d.Platform, here)
 	}
@@ -94,12 +94,12 @@ func loadLock(path string, stderr io.Writer) (bottle.Lock, error) {
 	// reader should be able to see WHICH file made that claim and how old
 	// it is without opening it.
 	fmt.Fprintf(stderr, "zpkgx: %s, %d pin(s), %s\n",
-		path, len(d.Pins), bottle.LockAge(d.Generated, timeNow()))
+		path, len(d.Pins), artifact.LockAge(d.Generated, timeNow()))
 	return d, nil
 }
 
 // Seams: a test needs neither a file nor a clock.
 var (
-	readLockFile = bottle.ReadLock
+	readLockFile = artifact.ReadLock
 	timeNow      = time.Now
 )

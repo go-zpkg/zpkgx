@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 func TestRunConfigWarning(t *testing.T) {
@@ -81,16 +81,16 @@ func TestSpecParsing(t *testing.T) {
 }
 
 func TestRunHelpVersion(t *testing.T) {
-	bottle.Warn = nil
+	artifact.Warn = nil
 	if rc := run([]string{"--help"}); rc != 0 {
 		t.Errorf("--help rc=%d", rc)
 	}
 	// run() installs the diagnostic sink: a soname the resolver cannot provide
 	// must reach the user's stderr, not vanish until the program fails to start.
-	if bottle.Warn == nil {
-		t.Error("run() must install bottle.Warn")
+	if artifact.Warn == nil {
+		t.Error("run() must install artifact.Warn")
 	}
-	bottle.Warn("libnope.so.9 is NEEDED but nothing provides it") // must not panic
+	artifact.Warn("libnope.so.9 is NEEDED but nothing provides it") // must not panic
 	if rc := run([]string{"-v"}); rc != 0 {
 		t.Errorf("-v rc=%d", rc)
 	}
@@ -108,7 +108,7 @@ func eqStrs(a, b []string) bool {
 
 // TestEnvMode: `zpkgx +a +b` with no command prints the environment those
 // packages bring — the `eval "$(zpkgx …)"` contract bk's build script depends on.
-// It must cover the WHOLE closure and BOTH lib and lib64 (a linux/x86-64 bottle
+// It must cover the WHOLE closure and BOTH lib and lib64 (a linux/x86-64 artifact
 // may install its libraries and .pc files under lib64; upstream zpkgx exports
 // only lib/pkgconfig, which is why a wget build could not find openssl there).
 func TestEnvMode(t *testing.T) {
@@ -128,9 +128,9 @@ func TestEnvMode(t *testing.T) {
 	mk(t, "tool.org", "v1.0.0", "share", "pkgconfig")
 	mk(t, "dep.org", "v2.0.0", "lib64", "pkgconfig")
 
-	closure := []bottle.Resolved{
-		{Project: "tool.org", Version: bottle.ParseVer("1.0.0")},
-		{Project: "dep.org", Version: bottle.ParseVer("2.0.0")},
+	closure := []artifact.Resolved{
+		{Project: "tool.org", Version: artifact.ParseVer("1.0.0")},
+		{Project: "dep.org", Version: artifact.ParseVer("2.0.0")},
 	}
 	var out strings.Builder
 	if err := envMode(closure, dir, formatShell, &out); err != nil {
@@ -229,9 +229,9 @@ func TestEnvModeRuntimeEnv(t *testing.T) {
 		"plain.org":        "provides:\n  - bin/plain\n",
 	})
 
-	closure := []bottle.Resolved{
-		{Project: "gnu.org/help2man", Version: bottle.ParseVer("1.49.3")},
-		{Project: "plain.org", Version: bottle.ParseVer("1.0.0")},
+	closure := []artifact.Resolved{
+		{Project: "gnu.org/help2man", Version: artifact.ParseVer("1.49.3")},
+		{Project: "plain.org", Version: artifact.ParseVer("1.0.0")},
 	}
 	var out strings.Builder
 	if err := envMode(closure, dir, formatShell, &out); err != nil {
@@ -257,11 +257,11 @@ func TestEnvModeRuntimeEnvUnfetchable(t *testing.T) {
 	}
 	fakePantry(t, map[string]string{})
 	var said []string
-	bottle.Warn = func(msg string) { said = append(said, msg) }
-	defer func() { bottle.Warn = nil }()
+	artifact.Warn = func(msg string) { said = append(said, msg) }
+	defer func() { artifact.Warn = nil }()
 
 	var out strings.Builder
-	if err := envMode([]bottle.Resolved{{Project: "ghost.org", Version: bottle.ParseVer("9.9.9")}}, dir, formatShell, &out); err != nil {
+	if err := envMode([]artifact.Resolved{{Project: "ghost.org", Version: artifact.ParseVer("9.9.9")}}, dir, formatShell, &out); err != nil {
 		t.Fatalf("an unfetchable recipe must not fail the env: %v", err)
 	}
 	if !strings.Contains(out.String(), "export PATH=") {
@@ -272,7 +272,7 @@ func TestEnvModeRuntimeEnvUnfetchable(t *testing.T) {
 	}
 }
 
-// fakePantry serves package.yml for the given projects and points bottle at it,
+// fakePantry serves package.yml for the given projects and points artifact at it,
 // so a test can drive recipe-reading without the network.
 func fakePantry(t *testing.T, recipes map[string]string) {
 	t.Helper()
@@ -284,16 +284,16 @@ func fakePantry(t *testing.T, recipes map[string]string) {
 		}
 		http.NotFound(w, r)
 	}))
-	old, oldOverlay := bottle.PantryBase, bottle.PantryOverlay
-	bottle.PantryBase, bottle.PantryOverlay = srv.URL, ""
-	t.Cleanup(func() { srv.Close(); bottle.PantryBase, bottle.PantryOverlay = old, oldOverlay })
+	old, oldOverlay := artifact.PantryBase, artifact.PantryOverlay
+	artifact.PantryBase, artifact.PantryOverlay = srv.URL, ""
+	t.Cleanup(func() { srv.Close(); artifact.PantryBase, artifact.PantryOverlay = old, oldOverlay })
 }
 
 // TestEnvModeKeepsLibcHeadersOffCPATH: CPATH applies to EVERY compiler
-// invocation, so a bottle glibc's headers reach compilers using the host's
+// invocation, so an artifact glibc's headers reach compilers using the host's
 // libc, and two glibc header sets in one translation unit conflict outright —
 // "conflicting types for 'uint64_t'", which is how the kernel's host tools
-// failed. The library path is a different matter and keeps the bottle.
+// failed. The library path is a different matter and keeps the artifact.
 func TestEnvModeKeepsLibcHeadersOffCPATH(t *testing.T) {
 	dir := t.TempDir()
 	for _, p := range [][]string{
@@ -305,9 +305,9 @@ func TestEnvModeKeepsLibcHeadersOffCPATH(t *testing.T) {
 		}
 	}
 	fakePantry(t, map[string]string{})
-	closure := []bottle.Resolved{
-		{Project: "gnu.org/glibc", Version: bottle.ParseVer("2.44.0")},
-		{Project: "zlib.net", Version: bottle.ParseVer("1.3.2")},
+	closure := []artifact.Resolved{
+		{Project: "gnu.org/glibc", Version: artifact.ParseVer("2.44.0")},
+		{Project: "zlib.net", Version: artifact.ParseVer("1.3.2")},
 	}
 	var out strings.Builder
 	if err := envMode(closure, dir, formatShell, &out); err != nil {
@@ -348,9 +348,9 @@ func TestEnvModeDepPrefix(t *testing.T) {
 		"curl.se/ca-certs": "provides:\n  - bin/c\n",
 	})
 
-	closure := []bottle.Resolved{
-		{Project: "a.org", Version: bottle.ParseVer("1.0.0")},
-		{Project: "curl.se/ca-certs", Version: bottle.ParseVer("2026.8.13")},
+	closure := []artifact.Resolved{
+		{Project: "a.org", Version: artifact.ParseVer("1.0.0")},
+		{Project: "curl.se/ca-certs", Version: artifact.ParseVer("2026.8.13")},
 	}
 	var out strings.Builder
 	if err := envMode(closure, dir, formatShell, &out); err != nil {
@@ -362,9 +362,9 @@ func TestEnvModeDepPrefix(t *testing.T) {
 	}
 }
 
-// mkClosure lays out two bottle prefixes on disk and returns the closure over
+// mkClosure lays out two artifact prefixes on disk and returns the closure over
 // them: tool.org with the classic lib layout, dep.org with the lib64 one.
-func mkClosure(t *testing.T, dir string) []bottle.Resolved {
+func mkClosure(t *testing.T, dir string) []artifact.Resolved {
 	t.Helper()
 	for _, parts := range [][]string{
 		{"tool.org", "v1.0.0", "bin"},
@@ -376,9 +376,9 @@ func mkClosure(t *testing.T, dir string) []bottle.Resolved {
 			t.Fatal(err)
 		}
 	}
-	return []bottle.Resolved{
-		{Project: "tool.org", Version: bottle.ParseVer("1.0.0")},
-		{Project: "dep.org", Version: bottle.ParseVer("2.0.0")},
+	return []artifact.Resolved{
+		{Project: "tool.org", Version: artifact.ParseVer("1.0.0")},
+		{Project: "dep.org", Version: artifact.ParseVer("2.0.0")},
 	}
 }
 
@@ -572,7 +572,7 @@ func TestSetEnvReplacesRatherThanAppends(t *testing.T) {
 }
 
 // A recipe's `runtime: env:` chains onto what the caller had — help2man writes
-// `PERL5LIB: "{{prefix}}/lib/perl5:$PERL5LIB"` — and bottle keeps the `$VAR`
+// `PERL5LIB: "{{prefix}}/lib/perl5:$PERL5LIB"` — and artifact keeps the `$VAR`
 // verbatim because the SHELL expands it in `eval "$(zpkgx +…)"`. There is no
 // shell in the run form, so it has to expand them itself; otherwise the literal
 // characters `$PERL5LIB` arrive at the end of a path list, which is what
@@ -629,9 +629,9 @@ func TestUnsetEnvRemovesEveryCopy(t *testing.T) {
 // `env: python: No such file or directory`.
 func TestRunEnvCarriesTheWholeClosure(t *testing.T) {
 	dir := t.TempDir()
-	closure := []bottle.Resolved{
-		{Project: "a.org", Version: bottle.Ver{Raw: "1.0.0"}},
-		{Project: "b.org/dep", Version: bottle.Ver{Raw: "2.0.0"}},
+	closure := []artifact.Resolved{
+		{Project: "a.org", Version: artifact.Ver{Raw: "1.0.0"}},
+		{Project: "b.org/dep", Version: artifact.Ver{Raw: "2.0.0"}},
 	}
 	for _, r := range closure {
 		if err := os.MkdirAll(filepath.Join(dir, r.Project, "v"+r.Version.Raw, "bin"), 0o755); err != nil {
@@ -666,9 +666,9 @@ func TestRunEnvCarriesTheWholeClosure(t *testing.T) {
 // that names its binary after its own version can be looked up.
 // apache.org/apr-util provides only `bin/apu-{{ version.major }}-config`.
 func TestVersionOfReadsTheClosure(t *testing.T) {
-	closure := []bottle.Resolved{
-		{Project: "a.org", Version: bottle.Ver{Raw: "1.2.3"}},
-		{Project: "apache.org/apr-util", Version: bottle.Ver{Raw: "1.6.5"}},
+	closure := []artifact.Resolved{
+		{Project: "a.org", Version: artifact.Ver{Raw: "1.2.3"}},
+		{Project: "apache.org/apr-util", Version: artifact.Ver{Raw: "1.6.5"}},
 	}
 	if got := versionOf("apache.org/apr-util", closure); got != "1.6.5" {
 		t.Errorf("versionOf = %q, want 1.6.5", got)
@@ -743,7 +743,7 @@ func TestJSONFormGetsNoShellKeyword(t *testing.T) {
 	}
 }
 
-// glibc's bottle puts its libraries in a VERSIONED subdirectory — libc.so.6
+// glibc's artifact puts its libraries in a VERSIONED subdirectory — libc.so.6
 // lives in lib/glibc-2.44/, and lib/ holds nothing else. Whether that
 // directory belongs on the exported LD_LIBRARY_PATH depends on WHOSE LOADER
 // will read it, and both answers are defects when given to the wrong tree.
@@ -761,11 +761,11 @@ func TestJSONFormGetsNoShellKeyword(t *testing.T) {
 // matters at least as much as the first.
 func TestEnvModeGlibcLibDirFollowsTheLoader(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, bottle.GlibcProject, "v2.44.0", "lib", "glibc-2.44"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, artifact.GlibcProject, "v2.44.0", "lib", "glibc-2.44"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	closure := []bottle.Resolved{{Project: bottle.GlibcProject, Version: bottle.ParseVer("2.44.0")}}
-	sub := filepath.Join(dir, bottle.GlibcProject, "v2.44.0", "lib", "glibc-2.44")
+	closure := []artifact.Resolved{{Project: artifact.GlibcProject, Version: artifact.ParseVer("2.44.0")}}
+	sub := filepath.Join(dir, artifact.GlibcProject, "v2.44.0", "lib", "glibc-2.44")
 
 	old := loaderIsOurs
 	t.Cleanup(func() { loaderIsOurs = old })
@@ -780,9 +780,9 @@ func TestEnvModeGlibcLibDirFollowsTheLoader(t *testing.T) {
 			t.Errorf("LD_LIBRARY_PATH does not name %s:\n%s", sub, out.String())
 		}
 		// And it agrees with what `zpkgx -- cmd` hands its loader.
-		for _, d := range bottle.LibDirs(closure, dir) {
+		for _, d := range artifact.LibDirs(closure, dir) {
 			if !strings.Contains(out.String(), d) {
-				t.Errorf("the eval omits %s, which bottle.LibDirs includes:\n%s", d, out.String())
+				t.Errorf("the eval omits %s, which artifact.LibDirs includes:\n%s", d, out.String())
 			}
 		}
 	})
@@ -798,8 +798,8 @@ func TestEnvModeGlibcLibDirFollowsTheLoader(t *testing.T) {
 				"this is the __pointer_chk_guard failure:\n%s", out.String())
 		}
 		// <prefix>/lib still is: that is the conventional layout and every
-		// other bottle uses it.
-		if !strings.Contains(out.String(), filepath.Join(dir, bottle.GlibcProject, "v2.44.0", "lib")) {
+		// other artifact uses it.
+		if !strings.Contains(out.String(), filepath.Join(dir, artifact.GlibcProject, "v2.44.0", "lib")) {
 			t.Errorf("the conventional lib dir went missing too:\n%s", out.String())
 		}
 	})

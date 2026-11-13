@@ -8,22 +8,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // indexStore lays out a store with a catalogue, and optionally its index,
 // exactly where zpkgx looks for them — and points ZPKG_DIR at it.
-func indexStore(t *testing.T, cat bottle.Catalog, withIndex bool) (dir, jsonPath, namesPath string) {
+func indexStore(t *testing.T, cat artifact.Catalog, withIndex bool) (dir, jsonPath, namesPath string) {
 	t.Helper()
 	dir = t.TempDir()
 	t.Setenv("ZPKG_DIR", dir)
 	t.Setenv("ZPKG_CATALOG", "")
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	jsonPath, namesPath = catalogPath(osn, arch), catalogNamesPath(osn, arch)
 	if err := os.MkdirAll(filepath.Dir(jsonPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	b, err := bottle.MarshalCatalog(cat)
+	b, err := artifact.MarshalCatalog(cat)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,12 +38,12 @@ func indexStore(t *testing.T, cat bottle.Catalog, withIndex bool) (dir, jsonPath
 	return dir, jsonPath, namesPath
 }
 
-func threeProjects() bottle.Catalog {
-	return bottle.Catalog{Projects: []bottle.CatalogProject{
+func threeProjects() artifact.Catalog {
+	return artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "gnu.org/bash", Versions: []string{"5.3"}, Deps: []string{"gnu.org/ncurses"}},
 		{Project: "curl.se", Versions: []string{"8.20"}, Summary: "transfer a URL"},
 		// No version: "named by the pantry, nothing published", which is
-		// what `no bottle here` is made of.
+		// what `no artifact here` is made of.
 		{Project: "aerc-mail.org"},
 	}}
 }
@@ -250,8 +250,8 @@ func TestCompletionCatalogPrefersTheIndexAndAgreesWithTheJSON(t *testing.T) {
 // exact disagreement this format is careful about.
 func TestCompletionCatalogIgnoresTheIndexWhenAFileIsNamed(t *testing.T) {
 	dir, _, _ := indexStore(t, threeProjects(), true)
-	other := bottle.Catalog{Projects: []bottle.CatalogProject{{Project: "only.this", Versions: []string{"1.0"}}}}
-	b, err := bottle.MarshalCatalog(other)
+	other := artifact.Catalog{Projects: []artifact.CatalogProject{{Project: "only.this", Versions: []string{"1.0"}}}}
+	b, err := artifact.MarshalCatalog(other)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func TestCompletionCatalogIgnoresTheIndexWhenAFileIsNamed(t *testing.T) {
 	}
 }
 
-func completionStrings(cat bottle.Catalog, word string) string {
+func completionStrings(cat artifact.Catalog, word string) string {
 	var out []string
 	for _, n := range cat.Complete(word) {
 		out = append(out, fmt.Sprintf("%s|%v|%d", n.Name, n.Leaf, n.Under))
@@ -276,7 +276,7 @@ func completionStrings(cat bottle.Catalog, word string) string {
 
 func mustJSONPath(t *testing.T) string {
 	t.Helper()
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	return catalogPath(osn, arch)
 }
 
@@ -486,7 +486,7 @@ func TestAnUnwritableIndexWarnsOnUpdateAndFailsOnReindex(t *testing.T) {
 			t.Errorf("stderr = %q, want the warning and what it means", errb.String())
 		}
 		// The catalogue really is there: the command did its actual job.
-		osn, arch := bottle.HostSlug()
+		osn, arch := artifact.HostSlug()
 		if _, err := os.Stat(catalogPath(osn, arch)); err != nil {
 			t.Errorf("the catalogue was not written: %v", err)
 		}
@@ -520,8 +520,8 @@ func TestAnUnwritableIndexWarnsOnUpdateAndFailsOnReindex(t *testing.T) {
 //	../outside	1.0  ✓ 9.9.9
 //
 // and that `✓ 9.9.9` is a directory OUTSIDE $ZPKG_DIR, reported as installed —
-// because lsNote asks bottle.InstalledVersions, which does
-// filepath.Join(dir, project). bottle.UnmarshalCatalog refuses the name
+// because lsNote asks artifact.InstalledVersions, which does
+// filepath.Join(dir, project). artifact.UnmarshalCatalog refuses the name
 // outright; this reader built a Catalog by hand and skipped the refusal.
 //
 // The test is a PAIR: the traversing name is refused, and a real nested
@@ -545,13 +545,13 @@ func TestTheIndexRefusesANameTheCatalogueParserWouldRefuse(t *testing.T) {
 		// And the same name through the CATALOGUE parser, so the two readers
 		// are shown to agree rather than assumed to.
 		bad := []byte(`{"generated":"2026-10-11T00:00:00Z","projects":[{"project":"../x","versions":["1.0"]}]}`)
-		if _, err := bottle.UnmarshalCatalog(bad); err == nil {
+		if _, err := artifact.UnmarshalCatalog(bad); err == nil {
 			t.Error("the catalogue parser accepts it too — then this guard is in the wrong place")
 		}
 	})
 
 	t.Run("a real nested project name is accepted", func(t *testing.T) {
-		cat := bottle.Catalog{Projects: []bottle.CatalogProject{
+		cat := artifact.Catalog{Projects: []artifact.CatalogProject{
 			{Project: "x.org/protocol/xcb", Versions: []string{"1.17.0"}},
 		}}
 		_, jsonPath, names := indexStore(t, cat, true)
@@ -582,14 +582,14 @@ func TestAFakedCatalogueIsNotOverruledByARealIndex(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ZPKG_DIR", dir)
 	t.Setenv("ZPKG_CATALOG", "")
-	planted := bottle.Catalog{Projects: []bottle.CatalogProject{
+	planted := artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "from-the-machine.example", Versions: []string{"9.9.9"}},
 	}}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	if err := os.MkdirAll(filepath.Dir(catalogPath(osn, arch)), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	b, err := bottle.MarshalCatalog(planted)
+	b, err := artifact.MarshalCatalog(planted)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -605,7 +605,7 @@ func TestAFakedCatalogueIsNotOverruledByARealIndex(t *testing.T) {
 		t.Fatalf("the planted index is not readable, so this control proves nothing: %+v %v", cat, ok)
 	}
 
-	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+	withCatalog(t, artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "from-the-test.example", Versions: []string{"1.0"}},
 	}}, nil)
 

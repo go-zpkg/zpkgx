@@ -6,20 +6,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-func browseCat() bottle.Catalog {
-	return bottle.Catalog{
+func browseCat() artifact.Catalog {
+	return artifact.Catalog{
 		Generated: "2026-10-06T09:00:00Z",
-		Projects: []bottle.CatalogProject{
+		Projects: []artifact.CatalogProject{
 			{Project: "curl.se", Versions: []string{"8.17.0"}, Provides: []string{"curl"},
 				Deps: []string{"openssl.org", "zlib.net"}},
 			{Project: "curl.se/ca-certs", Versions: []string{"2026.09.25"}},
 			{Project: "openssl.org", Versions: []string{"3.6.0"}, Provides: []string{"openssl"}},
 			{Project: "zlib.net", Versions: []string{"1.3.2"}},
 			{Project: "gnu.org/bash", Versions: []string{"5.3"}, Provides: []string{"bash"}},
-			{Project: "gnu.org/gcc", Provides: []string{"gcc"}}, // no bottle here
+			{Project: "gnu.org/gcc", Provides: []string{"gcc"}}, // no artifact here
 		},
 	}
 }
@@ -162,14 +162,14 @@ func TestSearchFromAnywhere(t *testing.T) {
 // The screen is a WINDOW around the cursor. A node with 452 children on a
 // 24-line terminal must not print 452 lines per keystroke.
 func TestRenderShowsAWindow(t *testing.T) {
-	var projects []bottle.CatalogProject
+	var projects []artifact.CatalogProject
 	for i := 0; i < 400; i++ {
-		projects = append(projects, bottle.CatalogProject{
+		projects = append(projects, artifact.CatalogProject{
 			Project:  "x.org/p" + string(rune('a'+i%26)) + string(rune('a'+i/26)),
 			Versions: []string{"1.0.0"},
 		})
 	}
-	b := &browser{cat: bottle.Catalog{Generated: "2026-10-06T09:00:00Z", Projects: projects}, at: "x.org"}
+	b := &browser{cat: artifact.Catalog{Generated: "2026-10-06T09:00:00Z", Projects: projects}, at: "x.org"}
 	withInstalled(t, nil)
 	var out bytes.Buffer
 	b.render(&out, 24)
@@ -214,7 +214,7 @@ func TestBrowseWithNoCatalogue(t *testing.T) {
 	// when the catalogue has no projects, and without this the test read
 	// the developer's own ~/.pkgx and found plenty.
 	t.Setenv("ZPKG_DIR", t.TempDir())
-	withCatalog(t, bottle.Catalog{Generated: "2026-10-06T09:00:00Z"}, nil)
+	withCatalog(t, artifact.Catalog{Generated: "2026-10-06T09:00:00Z"}, nil)
 	var errb bytes.Buffer
 	if code := runBrowse(nil, bytes.NewReader(nil), &bytes.Buffer{}, &errb); code != 1 {
 		t.Errorf("code=%d, want 1", code)
@@ -340,7 +340,7 @@ func TestTabReachesTheDependentsOfANodeThatHasSome(t *testing.T) {
 // Its own catalogue, so the shape is part of the test rather than a
 // property of a shared fixture somebody may change.
 func TestDescendingFromDependentsKeepsWalkingUp(t *testing.T) {
-	cat := bottle.Catalog{Projects: []bottle.CatalogProject{
+	cat := artifact.Catalog{Projects: []artifact.CatalogProject{
 		{Project: "leaf.org", Versions: []string{"1.0"}, Deps: []string{"zlib.net"}},
 		{Project: "zlib.net", Versions: []string{"1.3.2"}},
 	}}

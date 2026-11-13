@@ -3,7 +3,7 @@ package app
 // The end-of-life ranking needs no activation here any more.
 //
 // This file used to hold the list of abandoned release lines and an `init()`
-// that assigned it to `bottle.DefaultDeprecated`. That was written because the
+// that assigned it to `artifact.DefaultDeprecated`. That was written because the
 // feature had shipped behind `ZPKG_DEPRECATED` alone and nobody sets it, so it
 // changed no answer for anybody — a capability nobody switches on is a
 // capability the fleet does not have.
@@ -15,12 +15,12 @@ package app
 // — the INSTALLER — put the end-of-life 3.6.4 on a clean machine while `zpkgx`
 // gave 3.5.8 from the same registry.
 //
-// bottle v0.63.0 carries the list itself (go-zpkg/bottle#186), so every
+// artifact v0.63.0 carries the list itself (go-zpkg/artifact#186), so every
 // binary that resolves inherits the same ranking without an activation step,
 // and there is ONE list rather than one per module. Two lists are two answers
 // waiting to disagree, which is the defect this was meant to end.
 //
-// The data and the tests that guard it now live in bottle:
+// The data and the tests that guard it now live in artifact:
 // `KnownDeprecated`, `KnownSupported`, `KnownDeprecatedAsOf`.
 //
 // `ZPKG_DEPRECATED` is unchanged and still overrides, and a file that is named

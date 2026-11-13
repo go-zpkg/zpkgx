@@ -38,7 +38,7 @@ func TestCatalogPlatformsPrintsOnlyPlatforms(t *testing.T) {
 
 // ⛔ A FAILURE IS NOT AN EMPTY LIST. The caller is a loop: on exit 0 with no
 // output it scans nothing and reports a clean fleet, which is the same
-// sentence as "every platform is clean" and the opposite fact. bottle's
+// sentence as "every platform is clean" and the opposite fact. artifact's
 // Platforms refuses to return an empty list; this is the other half of that
 // promise, here where the exit status is decided.
 func TestCatalogPlatformsFailsLoudly(t *testing.T) {

@@ -10,11 +10,11 @@
 // passes.
 //
 // It is also the instrument for the opposite mistake. `pkgx ls` marks a
-// project "no bottle here" from the same file, and how many of those there
+// project "no artifact here" from the same file, and how many of those there
 // are on a given platform decides whether that annotation is a footnote or
 // the main thing a reader sees.
 //
-// # IT USES bottle's OWN TYPE, AND THE FIRST VERSION DID NOT
+// # IT USES artifact's OWN TYPE, AND THE FIRST VERSION DID NOT
 //
 // The first version declared the JSON shape by hand and asked for
 // `dependencies`. The field is `deps`, so it found none, and was about to
@@ -23,7 +23,7 @@
 //
 // A census must count what the client counts. Restating a schema beside the
 // schema makes the restatement a dependency that nothing updates, so this
-// goes through bottle.UnmarshalCatalog: the same parser, the same
+// goes through artifact.UnmarshalCatalog: the same parser, the same
 // validation, the same sanitising.
 //
 //	go run ./internal/catstat catalog/linux-aarch64.json [more.json...]
@@ -37,12 +37,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 func main() {
 	fs := flag.NewFlagSet("catstat", flag.ContinueOnError)
-	missing := fs.Bool("missing", false, "name the projects with no bottle on this platform, instead of counting them")
+	missing := fs.Bool("missing", false, "name the projects with no artifact on this platform, instead of counting them")
 	limit := fs.Int("n", 40, "with -missing, how many names to print (0 prints them all)")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		os.Exit(2)
@@ -69,7 +69,7 @@ func main() {
 
 // listMissing names what the count leaves anonymous.
 //
-// ⛔ A PERCENTAGE IS NOT A WORK LIST. "with a bottle 1373 (70.8%)" says 567
+// ⛔ A PERCENTAGE IS NOT A WORK LIST. "with an artifact 1373 (70.8%)" says 567
 // projects on darwin/aarch64 have a recipe and nothing to install, and that
 // number cannot be acted on: nobody can file, build or triage a percentage.
 // The names are already in the file, so this is a read, not a sweep — no
@@ -95,7 +95,7 @@ func listMissing(w io.Writer, path string, limit int) error {
 		shown = shown[:limit]
 	}
 	fmt.Fprintf(w, "%s\n", path)
-	fmt.Fprintf(w, "  %d of %d project(s) have no bottle here\n", len(names), len(c.Projects))
+	fmt.Fprintf(w, "  %d of %d project(s) have no artifact here\n", len(names), len(c.Projects))
 	for _, n := range shown {
 		fmt.Fprintf(w, "  %s\n", n)
 	}
@@ -107,21 +107,21 @@ func listMissing(w io.Writer, path string, limit int) error {
 
 // readCatalog is the one door both reports come through, so a catalogue that
 // is empty or will not parse is refused once rather than in each of them.
-func readCatalog(path string) (bottle.Catalog, error) {
+func readCatalog(path string) (artifact.Catalog, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return bottle.Catalog{}, err
+		return artifact.Catalog{}, err
 	}
-	c, err := bottle.UnmarshalCatalog(b)
+	c, err := artifact.UnmarshalCatalog(b)
 	if err != nil {
-		return bottle.Catalog{}, fmt.Errorf("%s: %w", path, err)
+		return artifact.Catalog{}, fmt.Errorf("%s: %w", path, err)
 	}
 	if len(c.Projects) == 0 {
 		// A catalogue with no projects is not a census of nothing, it is a
 		// broken file, and every percentage below would be a division by
 		// zero dressed up as a finding — or, for -missing, an empty work
 		// list that reads as "nothing to do".
-		return bottle.Catalog{}, fmt.Errorf("%s: no projects", path)
+		return artifact.Catalog{}, fmt.Errorf("%s: no projects", path)
 	}
 	return c, nil
 }
@@ -140,7 +140,7 @@ func report(w io.Writer, path string) error {
 	// test is exact rather than a guess — but that is a property of the
 	// published DATA, and this is the instrument that can say so instead of
 	// the claim sitting in a comment nobody can check.
-	var summaries, provides, bottled, deps, cmds, bareNames int
+	var summaries, provides, packaged, deps, cmds, bareNames int
 	namespaces := map[string]bool{}
 	platforms := map[string]bool{}
 	for _, p := range c.Projects {
@@ -152,7 +152,7 @@ func report(w io.Writer, path string) error {
 			cmds += len(p.Provides)
 		}
 		if len(p.Versions) > 0 {
-			bottled++
+			packaged++
 		}
 		if len(p.Deps) > 0 {
 			deps++
@@ -180,7 +180,7 @@ func report(w io.Writer, path string) error {
 	// descriptions would find anything, and it is the one that surprises.
 	line("summaries", summaries)
 	line("provides", provides)
-	line("with a bottle", bottled)
+	line("with an artifact", packaged)
 	line("dependencies", deps)
 	fmt.Fprintf(w, "  commands      %d\n", cmds)
 	fmt.Fprintf(w, "  namespaces    %d\n", len(namespaces))

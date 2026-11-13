@@ -5,26 +5,26 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // stubCompanions replaces the two questions addCompanions asks, and restores
 // them. `avail` is the set of projects the registry can actually serve.
 func stubCompanions(t *testing.T, recipes map[string]map[string]string, avail map[string]bool, readErr map[string]error) {
 	t.Helper()
-	oc, op, ow := companionsFor, pickVersionFor, bottle.Warn
-	t.Cleanup(func() { companionsFor, pickVersionFor, bottle.Warn = oc, op, ow })
+	oc, op, ow := companionsFor, pickVersionFor, artifact.Warn
+	t.Cleanup(func() { companionsFor, pickVersionFor, artifact.Warn = oc, op, ow })
 	companionsFor = func(project, _, _ string) (map[string]string, error) {
 		if err := readErr[project]; err != nil {
 			return nil, err
 		}
 		return recipes[project], nil
 	}
-	pickVersionFor = func(project, _, _, _ string) (bottle.Ver, error) {
+	pickVersionFor = func(project, _, _, _ string) (artifact.Ver, error) {
 		if !avail[project] {
-			return bottle.Ver{}, errors.New("no bottle")
+			return artifact.Ver{}, errors.New("no artifact")
 		}
-		return bottle.Ver{}, nil
+		return artifact.Ver{}, nil
 	}
 }
 
@@ -45,19 +45,19 @@ func TestCompanionOfANamedRootIsAdded(t *testing.T) {
 	}
 }
 
-// A companion with no bottle for this platform is an ANSWER — we looked, there
+// A companion with no artifact for this platform is an ANSWER — we looked, there
 // is nothing to install — so it is skipped, and skipped quietly.
 func TestUnavailableCompanionIsSkippedQuietly(t *testing.T) {
 	stubCompanions(t,
 		map[string]map[string]string{"a.org": {"b.org/extra": "*"}},
 		map[string]bool{"a.org": true}, nil)
 	var warned []string
-	bottle.Warn = func(m string) { warned = append(warned, m) }
+	artifact.Warn = func(m string) { warned = append(warned, m) }
 
 	roots := map[string]string{"a.org": "*"}
 	addCompanions(roots)
 	if _, ok := roots["b.org/extra"]; ok {
-		t.Errorf("added a companion with no bottle: %v", roots)
+		t.Errorf("added a companion with no artifact: %v", roots)
 	}
 	if len(warned) != 0 {
 		t.Errorf("warned about an expected absence: %v", warned)
@@ -69,7 +69,7 @@ func TestUnavailableCompanionIsSkippedQuietly(t *testing.T) {
 func TestUnreadableCompanionsWarn(t *testing.T) {
 	stubCompanions(t, nil, map[string]bool{"a.org": true}, map[string]error{"a.org": errors.New("404")})
 	var warned []string
-	bottle.Warn = func(m string) { warned = append(warned, m) }
+	artifact.Warn = func(m string) { warned = append(warned, m) }
 
 	roots := map[string]string{"a.org": "*"}
 	addCompanions(roots)
@@ -120,7 +120,7 @@ func TestCompanionDoesNotOverwriteAnAskedForConstraint(t *testing.T) {
 func TestUnresolvableRootIsSilentHere(t *testing.T) {
 	stubCompanions(t, nil, map[string]bool{}, map[string]error{"./x.py": errors.New("Not Found")})
 	var warned []string
-	bottle.Warn = func(m string) { warned = append(warned, m) }
+	artifact.Warn = func(m string) { warned = append(warned, m) }
 
 	roots := map[string]string{"./x.py": "*"}
 	addCompanions(roots)

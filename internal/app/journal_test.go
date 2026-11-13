@@ -9,15 +9,15 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
-// bottleNoBottleErr is the real error bottle raises when a project exists
-// but has no bottle for this platform — the one `sayHowToAsk` turns into the
-// `zpkgs request` hint. Using bottle's own type rather than a lookalike is
+// artifactNoArtifactErr is the real error artifact raises when a project exists
+// but has no artifact for this platform — the one `sayHowToAsk` turns into the
+// `zpkgs request` hint. Using artifact's own type rather than a lookalike is
 // what keeps the journal's taxonomy tied to the hint's.
-func bottleNoBottleErr(project string) error {
-	return &bottle.NoBottleHereError{Project: project}
+func artifactNoArtifactErr(project string) error {
+	return &artifact.NoArtifactHereError{Project: project}
 }
 
 func journalStore(t *testing.T) string {
@@ -33,7 +33,7 @@ func journalStore(t *testing.T) string {
 // people here keep asking for and not get".
 func TestJournalRecordsAMissingPackageAsAGap(t *testing.T) {
 	journalStore(t)
-	recordFailure(bottleNoBottleErr("opendev.org/openstack/python-openstackclient"))
+	recordFailure(artifactNoArtifactErr("opendev.org/openstack/python-openstackclient"))
 
 	got := readJournal(journalPath())
 	if len(got) != 1 {
@@ -170,9 +170,9 @@ func TestJournalCanBeTurnedOff(t *testing.T) {
 func TestJournalCountsWhatKeepsFailing(t *testing.T) {
 	journalStore(t)
 	for i := 0; i < 3; i++ {
-		recordFailure(bottleNoBottleErr("wanted.org"))
+		recordFailure(artifactNoArtifactErr("wanted.org"))
 	}
-	recordFailure(bottleNoBottleErr("other.org"))
+	recordFailure(artifactNoArtifactErr("other.org"))
 	recordFailure(errors.New("unrelated"))
 
 	var out, errb strings.Builder

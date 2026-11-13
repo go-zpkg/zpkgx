@@ -11,13 +11,13 @@ import (
 // ⛔⛔ TestTheHomeEnvironmentDirIsTheStORE'S, NOT UPSTREAM'S.
 //
 // environmentDirs appended `$HOME/.pkgx/environments` for as long as
-// bottle.Dir() had been `$HOME/.zpkg` — so a user's environments were written
+// artifact.Dir() had been `$HOME/.zpkg` — so a user's environments were written
 // to one directory and searched for in another, and on a machine that had
 // never run upstream pkgx the path did not exist at all. The spelling was the
 // whole defect, which is why the assertion is on the spelling.
 //
 // `~/.pkgx` is upstream's store. Reading it would be reaching into another
-// project's directory, which is the same argument bottle/pkgx.go:376-379 makes
+// project's directory, which is the same argument artifact/pkgx.go:376-379 makes
 // for migrating nothing.
 func TestTheHomeEnvironmentDirIsOurStore(t *testing.T) {
 	dirs := environmentDirs("", "/home/u")

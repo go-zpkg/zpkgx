@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 func cfdEnv() environment {
@@ -21,13 +21,13 @@ func cfdEnv() environment {
 	}
 }
 
-func cfdLock() bottle.Lock {
-	osn, arch := bottle.HostSlug()
-	return bottle.Lock{
-		Version: bottle.LockfileVersion, Platform: osn + "/" + arch,
-		Generated: "2026-10-06T09:00:00Z", BK: "v0.14.1",
+func cfdLock() artifact.Lock {
+	osn, arch := artifact.HostSlug()
+	return artifact.Lock{
+		Version: artifact.LockfileVersion, Platform: osn + "/" + arch,
+		Generated: "2026-10-06T09:00:00Z", ZBK: "v0.14.1",
 		Roots: []string{"openmpi.org", "hdf5.org"},
-		Pins: []bottle.LockPin{
+		Pins: []artifact.LockPin{
 			{Project: "hdf5.org", Version: "1.14.6", Spec: "sha256:b"},
 			{Project: "openmpi.org", Version: "5.0.6", Spec: "sha256:a"},
 			{Project: "zlib.net", Version: "1.3.2", Spec: "sha256:c"}, // NOT in the manifest
@@ -35,10 +35,10 @@ func cfdLock() bottle.Lock {
 	}
 }
 
-func withEnvLock(t *testing.T, d bottle.Lock, err error) {
+func withEnvLock(t *testing.T, d artifact.Lock, err error) {
 	t.Helper()
 	prevR, prevE, prevT := readEnvLock, osIsNotExist, timeNow
-	readEnvLock = func(string) (bottle.Lock, error) { return d, err }
+	readEnvLock = func(string) (artifact.Lock, error) { return d, err }
 	osIsNotExist = func(e error) bool { return e != nil && strings.Contains(e.Error(), "no such") }
 	timeNow = func() time.Time { return time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC) }
 	t.Cleanup(func() { readEnvLock, osIsNotExist, timeNow = prevR, prevE, prevT })
@@ -52,7 +52,7 @@ func TestALockBesideAnEnvironmentWins(t *testing.T) {
 	envs := map[string]environment{"cfd": cfdEnv()}
 
 	// Without a lock: the manifest's constraints, unchanged.
-	withEnvLock(t, bottle.Lock{}, errors.New("no such file"))
+	withEnvLock(t, artifact.Lock{}, errors.New("no such file"))
 	if got := strings.Join(expandSpecs([]string{"cfd"}, envs), " "); got != "openmpi.org@5 hdf5.org" {
 		t.Errorf("unlocked = %q, want the manifest", got)
 	}
@@ -102,13 +102,13 @@ func TestALockFromAnotherPlatformIsIgnoredOutLoud(t *testing.T) {
 // Absent says nothing — that is every environment that was never locked.
 // Present and UNREADABLE is a broken pin and must not read as "no lock".
 func TestAnAbsentLockIsSilentAndABrokenOneIsNot(t *testing.T) {
-	withEnvLock(t, bottle.Lock{}, errors.New("open x: no such file or directory"))
+	withEnvLock(t, artifact.Lock{}, errors.New("open x: no such file or directory"))
 	var said []string
 	if _, ok := envLock(cfdEnv(), func(m string) { said = append(said, m) }); ok || len(said) != 0 {
 		t.Errorf("an absent lock said %v", said)
 	}
 
-	withEnvLock(t, bottle.Lock{}, errors.New("not a lock"))
+	withEnvLock(t, artifact.Lock{}, errors.New("not a lock"))
 	said = nil
 	if _, ok := envLock(cfdEnv(), func(m string) { said = append(said, m) }); ok {
 		t.Error("an unreadable lock was honoured")
@@ -118,7 +118,7 @@ func TestAnAbsentLockIsSilentAndABrokenOneIsNot(t *testing.T) {
 	}
 
 	// And one that parses but pins nothing.
-	withEnvLock(t, bottle.Lock{Generated: "2026-10-06T09:00:00Z"}, nil)
+	withEnvLock(t, artifact.Lock{Generated: "2026-10-06T09:00:00Z"}, nil)
 	said = nil
 	if _, ok := envLock(cfdEnv(), func(m string) { said = append(said, m) }); ok {
 		t.Error("a lock pinning nothing was honoured")
@@ -164,7 +164,7 @@ func TestEnvShowSaysWhetherALockIsInForce(t *testing.T) {
 	}
 
 	out.Reset()
-	withEnvLock(t, bottle.Lock{}, errors.New("no such file"))
+	withEnvLock(t, artifact.Lock{}, errors.New("no such file"))
 	describeEnvLock(cfdEnv(), &out)
 	if !strings.Contains(out.String(), "none") || !strings.Contains(out.String(), "resolved afresh") {
 		t.Errorf("show does not say there is no lock: %q", out.String())
@@ -175,7 +175,7 @@ func TestEnvShowSaysWhetherALockIsInForce(t *testing.T) {
 func TestEnvLockReadsARealFile(t *testing.T) {
 	dir := t.TempDir()
 	e := environment{Name: "cfd", File: filepath.Join(dir, "site.hcl2")}
-	if err := os.WriteFile(envLockPath(e), []byte(bottle.RenderLock(cfdLock())), 0o644); err != nil {
+	if err := os.WriteFile(envLockPath(e), []byte(artifact.RenderLock(cfdLock())), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	prev := timeNow
@@ -196,7 +196,7 @@ func TestEnvLockReadsARealFile(t *testing.T) {
 // An environment's name is an HCL block label and was only ever a map key,
 // where any string is harmless. filepath.Join CLEANS its result, so a
 // crafted label escapes the directory — and the lock it then reads is
-// installed. The pins cannot traverse any more (bottle validates project
+// installed. The pins cannot traverse any more (artifact validates project
 // names), but they can name a real project at an old version, which is a
 // downgrade somebody else chose.
 func TestACraftedEnvironmentNameIsNotAPath(t *testing.T) {

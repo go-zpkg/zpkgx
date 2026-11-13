@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // An environment can have a LOCK beside it.
@@ -61,7 +61,7 @@ func envLockPath(e environment) string {
 //	env "../../../../tmp/evil"
 //
 // would read /tmp/evil.lock.hcl and install exactly what it pins. The pins
-// themselves can no longer traverse (bottle validates project names), but
+// themselves can no longer traverse (artifact validates project names), but
 // they can still name a real project at an old version, which is a
 // downgrade somebody else chose.
 //
@@ -91,10 +91,10 @@ func safeEnvName(n string) bool {
 // It is SAID, because silently resolving afresh under a file named
 // `cfd.lock.hcl` is how somebody comes to believe a thing is pinned when it
 // is not.
-func envLock(e environment, warn func(string)) (bottle.Lock, bool) {
+func envLock(e environment, warn func(string)) (artifact.Lock, bool) {
 	p := envLockPath(e)
 	if p == "" {
-		return bottle.Lock{}, false
+		return artifact.Lock{}, false
 	}
 	d, err := readEnvLock(p)
 	if err != nil {
@@ -103,17 +103,17 @@ func envLock(e environment, warn func(string)) (bottle.Lock, bool) {
 		if !osIsNotExist(err) {
 			warn(fmt.Sprintf("%s: %v — resolving %s afresh", p, err, e.Name))
 		}
-		return bottle.Lock{}, false
+		return artifact.Lock{}, false
 	}
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	if here := osn + "/" + arch; d.Platform != "" && d.Platform != here {
 		warn(fmt.Sprintf("%s was locked on %s and this is %s — resolving %s afresh",
 			p, d.Platform, here, e.Name))
-		return bottle.Lock{}, false
+		return artifact.Lock{}, false
 	}
 	if len(d.Pins) == 0 {
 		warn(fmt.Sprintf("%s pins nothing — resolving %s afresh", p, e.Name))
-		return bottle.Lock{}, false
+		return artifact.Lock{}, false
 	}
 	return d, true
 }
@@ -124,7 +124,7 @@ func envLock(e environment, warn func(string)) (bottle.Lock, bool) {
 // EVERY PIN, not just the ones the manifest names: that is what makes it a
 // lock. The manifest asks for `openmpi.org@5`; the lock says which 5, and
 // which hdf5, and which zlib underneath them.
-func lockedSpecsFor(d bottle.Lock) []string {
+func lockedSpecsFor(d artifact.Lock) []string {
 	out := make([]string, 0, len(d.Pins))
 	for _, p := range d.Pins {
 		if p.Project != "" && p.Version != "" {
@@ -147,12 +147,12 @@ func describeEnvLock(e environment, w io.Writer) {
 		return
 	}
 	fmt.Fprintf(w, "  lock: %s — %d pin(s), %s, taken on %s\n",
-		p, len(d.Pins), bottle.LockAge(d.Generated, timeNow()), d.Platform)
+		p, len(d.Pins), artifact.LockAge(d.Generated, timeNow()), d.Platform)
 }
 
 // Seams: a test must not need files on disk, and the "present but broken"
 // branch must be reachable from one that is not.
 var (
-	readEnvLock  = bottle.ReadLock
+	readEnvLock  = artifact.ReadLock
 	osIsNotExist = os.IsNotExist
 )

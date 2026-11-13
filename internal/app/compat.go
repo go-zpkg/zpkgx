@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // compatWorkers bounds the resolutions in flight. Each one is network-bound —
@@ -80,8 +80,8 @@ func compatProjects(rest []string, in io.Reader) ([]string, error) {
 // outcome is one project's answer.
 type outcome struct {
 	project  string
-	conflict *bottle.ConflictError // set when the closure has no solution
-	err      error                 // set when it failed for any other reason
+	conflict *artifact.ConflictError // set when the closure has no solution
+	err      error                   // set when it failed for any other reason
 }
 
 type compatResult struct {
@@ -92,7 +92,7 @@ type compatResult struct {
 }
 
 func solveAll(pins map[string]string, projects []string) compatResult {
-	osn, arch := bottle.HostSlug()
+	osn, arch := artifact.HostSlug()
 	out := make([]outcome, len(projects))
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, compatWorkers)
@@ -108,7 +108,7 @@ func solveAll(pins map[string]string, projects []string) compatResult {
 			}
 			o := outcome{project: p}
 			if _, err := graphFor(roots, osn, arch); err != nil {
-				var ce *bottle.ConflictError
+				var ce *artifact.ConflictError
 				if errors.As(err, &ce) {
 					o.conflict = ce
 				} else {

@@ -8,17 +8,17 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-zpkg/bottle"
+	"github.com/go-zpkg/artifact"
 )
 
 // `zpkgx store` — what is on this disk, which nothing could show.
 //
 // # WHY
 //
-// Every ephemeral `zpkgx <pkg>` leaves its bottles in
+// Every ephemeral `zpkgx <pkg>` leaves its artifacts in
 // $ZPKG_DIR/<project>/v<version>, and nothing ever removes one. `zpkgm list`
 // answers a different question — what did I ask to have installed — and a
-// bottle pulled to run one command six months ago is in neither.
+// artifact pulled to run one command six months ago is in neither.
 //
 // Measured on this developer's machine, before this command existed:
 // 41.2 GiB across 363 versions and 302 projects, 12.8 GiB of it in versions
@@ -65,24 +65,24 @@ func runStore(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, pfx()+"usage: "+tool+" store [--by-size] [-n N]")
 		return 2
 	}
-	dir := bottle.Dir()
+	dir := artifact.Dir()
 	// THE ROOTS ARE READ BEFORE THE STORE IS WALKED. A mistyped lock path
 	// should cost a moment, not the eight seconds it takes to scan 41 GiB
 	// and then be told the arguments were wrong.
-	var locks []bottle.Lock
+	var locks []artifact.Lock
 	for _, p := range roots {
-		l, err := bottle.ReadLock(p)
+		l, err := artifact.ReadLock(p)
 		if err != nil {
 			fmt.Fprintf(stderr, pfx()+"--root %s: %v\n", p, err)
 			return 2
 		}
 		locks = append(locks, l)
 	}
-	entries, err := bottle.ScanStore(dir)
+	entries, err := artifact.ScanStore(dir)
 	// EMPTY AND ABSENT GET THE SAME SENTENCE, because the difference is the
 	// code's business and not the reader's.
 	//
-	// A FROM scratch image ships a catalogue and no bottles, so its store
+	// A FROM scratch image ships a catalogue and no artifacts, so its store
 	// directory EXISTS and holds nothing. The first version printed
 	//
 	//	/zpkgx
@@ -141,7 +141,7 @@ func runStore(args []string, stdout, stderr io.Writer) int {
 		return rows[i].project < rows[j].project
 	})
 
-	total, versions, projects, older := bottle.StoreTotals(entries)
+	total, versions, projects, older := artifact.StoreTotals(entries)
 	fmt.Fprintf(stdout, "%s\n", dir)
 	shown := rows
 	if *top > 0 && *top < len(rows) {
@@ -164,9 +164,9 @@ func runStore(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "%s is in versions that are not the newest present — which is not the same as unused\n", human(older))
 	}
 	if len(roots) > 0 {
-		live, dead := bottle.LiveFromLocks(entries, locks)
-		lb, lv, _, _ := bottle.StoreTotals(live)
-		db, dv, _, _ := bottle.StoreTotals(dead)
+		live, dead := artifact.LiveFromLocks(entries, locks)
+		lb, lv, _, _ := artifact.StoreTotals(live)
+		db, dv, _, _ := artifact.StoreTotals(dead)
 		fmt.Fprintf(stdout, "\nagainst %d root(s): %s live over %d version(s), %s in %d version(s) no root needs\n",
 			len(roots), human(lb), lv, human(db), dv)
 		// WHOSE ROOTS, SAID EVERY TIME. Name a different lock and a

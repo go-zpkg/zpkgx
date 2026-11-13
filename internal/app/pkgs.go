@@ -110,7 +110,7 @@ usage:
                                      CVE rebuild produces. There is no date
                                      key: a published timestamp is pinned so
                                      a re-publish is byte-identical
-  zpkgs store [--by-size] [-n N]      what the bottle store holds: every version
+  zpkgs store [--by-size] [-n N]      what the artifact store holds: every version
                                      an ephemeral run ever pulled, and its
                                      size. Reports and deletes NOTHING
   zpkgs store --root <lock> ...       and what any of it is FOR: a lock pins
@@ -141,12 +141,12 @@ usage:
   "zpkgx node@22 --version", "zpkgx +gnu.org/make -- build.sh", "zpkgx -Q git".
 
 env:
-  ZPKG_DIR     bottle store (default: ~/.zpkg)
+  ZPKG_DIR     artifact store (default: ~/.zpkg)
   ZPKG_CATALOG read the catalogue from this file instead of $ZPKG_DIR/catalog —
                for an air-gapped image, or to inspect one before publishing.
                Named and unreadable is an error, not a quiet fallback
-  ZPKG_DIST    bottle source (default: oci://ghcr.io/go-pkgx/packages)
-  ZPKG_VERIFY  verify bottle signatures, fail-closed (default: on)
+  ZPKG_DIST    artifact source (default: oci://ghcr.io/go-pkgx/packages)
+  ZPKG_VERIFY  verify artifact signatures, fail-closed (default: on)
   ZPKG_DEPRECATED
                a JSON file of end-of-life release lines per project, which
                REPLACES the list built into this binary; {} turns it off.
@@ -273,7 +273,7 @@ func runEnvCmd(argv []string) int {
 // exactly one moment at which that is known.
 func Pkgs(argv []string) int {
 	tool = "zpkgs"
-	bottleWarn()
+	artifactWarn()
 	if err := configError(); err != nil {
 		fmt.Fprintln(os.Stderr, pfx()+"warning: ignoring ~/.zpkg/config.hcl2: "+err.Error())
 	}
