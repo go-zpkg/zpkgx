@@ -18,20 +18,20 @@ package, so there is a single source of truth and no duplication.
 This repository builds **two** binaries, and the split is about grammar
 rather than taste.
 
-Upstream pkgx has no verbs at all: the first argument that is not a flag is a
-**package**, and pkgx runs it. This fork had added nine verbs to that
+The grammar has no verbs: the first argument that is not a flag is a
+**package**, and `zpkgx` runs it. Nine verbs had been added to that
 position — `ls`, `search`, `why`, `store`, `browse`, `catalog`, `env`,
 `compat`, `completion` — and each one took a name away from the registry. Two
 took names that exist: measured against the published linux/x86-64 catalogue
 on 2026-10-18, **`gnu.org/coreutils` provides both `ls` and `env`**. So `zpkgx
-ls` listed a catalogue where upstream runs GNU ls, and there was no way to
-ask for the other one.
+ls` listed a catalogue instead of running GNU ls, and there was no way to ask
+for the other one.
 
 ```console
-$ zpkgx ls --version          # GNU coreutils, as upstream does
+$ zpkgx ls --version          # GNU coreutils: the first word is a package
 ls (GNU coreutils) 9.11
 $ zpkgs ls gnu.org            # what is available under a node
-$ zpkgx -Q ls                 # upstream's query mode, which this fork lacked
+$ zpkgx -Q ls                 # which project provides the command `ls`
 gnu.org/coreutils
 ```
 
@@ -40,7 +40,7 @@ the verbs off — `zpkgx pkg ls`. It fails the same way: `vercel.com/pkg`
 provides the command `pkg`, and any bare word can become a package tomorrow,
 because the whole point of the first position is that the registry decides
 what is in it. Only a token the grammar already reserves is safe: a flag
-(upstream's own choice for `-Q`) or a different binary.
+(`-Q`) or a different binary.
 
 `zpkgs` reads as a subject followed by a verb — `zpkgs search json`, `zpkgs why
 curl.se openssl.org`. Nothing in either published catalogue provides a
@@ -720,7 +720,7 @@ On stderr, so `zpkgs search x > list` still writes results and nothing else;
 and only below that floor, so a catalogue that one day carries descriptions
 goes quiet instead of nagging.
 
-The six are not ours to invent. Re-measured the same day over the upstream
+The six are not ours to invent. Re-measured the same day over the pantry
 corpus, parsed as YAML rather than grepped — `description:` also appears
 inside build scripts and URLs there — **1928 recipes read, 259 with a
 `display-name`, 6 with a `summary` or `description`**, and the catalogue
@@ -1305,7 +1305,7 @@ round-trips arbitrary modulefiles through the converter and a real HCL parser
   `zpkgx --help` prints the one this binary is built against, and it is held
   in exactly one place, `bottle.DistBase`, so it moves in one edit. Point this
   at a mirror of your own if you have one.
-  ⛔ It no longer names an upstream pkgx dist as an alternative: we are no
+  ⛔ It no longer names a pkgx dist as an alternative: we are no
   longer compatible with pkgx (go-zpkg/packages#431), so `ZPKG_DIST` +
   `ZPKG_VERIFY=0` against its pantry is not something this resolver can
   promise. The namespace the default currently sits in is a deployment fact
