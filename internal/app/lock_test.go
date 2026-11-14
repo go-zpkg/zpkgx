@@ -22,7 +22,7 @@ func hostLock() artifact.Lock {
 	osn, arch := artifact.HostSlug()
 	return artifact.Lock{
 		Version: artifact.LockfileVersion, Platform: osn + "/" + arch,
-		Generated: "2026-10-06T09:00:00Z", ZBK: "v0.12.0",
+		Generated: "2026-10-06T09:00:00Z", ZPKB: "v0.12.0",
 		Roots: []string{"curl.se"},
 		Pins: []artifact.LockPin{
 			{Project: "curl.se", Version: "8.17.0", Spec: "sha256:a"},
